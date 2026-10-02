@@ -1,4 +1,6 @@
 this file is to put ideas for everyone to edit with what they want to do with this project.
 
 
-have fun everybody!
+Idea 1: OpenStreetMap database/frontend focused on small businesses.
+
+
