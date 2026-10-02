@@ -4,7 +4,7 @@ this file is to put ideas for everyone to edit with what they want to do with th
 Idea 1: OpenStreetMap database/frontend focused on small businesses.
 
 
-hey guys its me charlie
+
 That’s a really solid app concept, especially for a Congressional App Challenge project. The key is to make it more than “Google Maps with different pins”: the app should actively surface businesses and communities that are easy to overlook.
 
 The core idea
