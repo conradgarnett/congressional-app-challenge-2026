@@ -90,7 +90,8 @@ publicapis.io/open-street-map-api):
 - `pipeline/`: offline Python data jobs. Not part of the site.
   - `fetch/districts.py`: district boundaries → `data/processed/districts.geojson`
   - `fetch/businesses.py`: OSM businesses per district → `data/processed/businesses.geojson`
-  - `filter/chains`, `filter/national`, `filter/matching`: small-business filter (not built yet)
+  - `filter/chains/filter_chains.py`: layer 1 chain filter → `data/processed/businesses_layer1.geojson`
+  - `filter/national`, `filter/matching`: layers 2 and 3 (not built yet)
 - `data/raw/`: downloads and caches, git-ignored. `data/processed/`: pipeline
   output, committed.
 
@@ -132,3 +133,19 @@ why "add a missing business" is a core feature, not an extra.
   VA-06 6% (not metro). Added `pipeline/fetch/businesses.py`. The first run
   hit a 504, so it now retries and falls back to mirror servers. Started this
   file.
+- **2026-10-02 (cloud run):** (a) Added the OSM API usage section (which API
+  for which job), using publicapis.io/open-street-map-api as the reference.
+  (b) Finding: the earlier Overpass errors were 504 Gateway Timeout because
+  the shared server was busy, not rate limiting (the status page showed 4 of
+  4 query slots free, no 429 errors). (c) Moved the pipeline run to a cloud
+  agent so it could finish while Conrad's laptop was closed. (d) What
+  happened: `districts.py` re-downloaded the Census files and matched the
+  committed file (20 districts, 9 metro). `businesses.py` could **not** pull
+  data: every connection to the Overpass servers (`overpass-api.de`,
+  `overpass.kumi.systems`) was reset or timed out, even for the tiny
+  `/api/status` request, so this looks like a block in the cloud
+  environment's network policy, not a busy server. No business data was
+  fetched, so the chain filter and false-positive check were not run and no
+  counts exist yet. Fix: in the cloud environment settings, set Network
+  access to a broader level or add the Overpass hosts to the allowed
+  domains, then rerun steps 3 to 5.
