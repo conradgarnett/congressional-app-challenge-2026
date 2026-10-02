@@ -115,6 +115,25 @@ python3 -m venv .venv
 | places with no name (can't be counted) | 188 |
 | businesses missing `addr:city` | about half |
 
+**Metro districts after layer 1 (chain filter), 2026-10-02:**
+
+| district | businesses in OSM | chains | not chains |
+|---|---|---|---|
+| DC-AL | 4,752 | 1,032 | 3,720 |
+| MD-04 | 1,975 | 1,026 | 949 |
+| MD-05 | 2,297 | 1,146 | 1,151 |
+| MD-06 | 3,444 | 1,311 | 2,133 |
+| **MD-08** | **2,687** | **890** | **1,797** |
+| VA-07 | 4,187 | 1,637 | 2,550 |
+| VA-08 | 4,172 | 1,451 | 2,721 |
+| VA-10 | 3,562 | 1,484 | 2,078 |
+| VA-11 | 3,662 | 1,629 | 2,033 |
+| **total** | **30,738** | **11,606** | **19,132** |
+
+Of the chains, 11,475 were caught by an OSM brand tag and only 131 by an NSI
+name match. Brand tags do almost all the work; NSI catches chains that
+mappers forgot to tag.
+
 OSM coverage is partial: the real number of businesses is far higher. That is
 why "add a missing business" is a core feature, not an extra.
 
@@ -149,3 +168,21 @@ why "add a missing business" is a core feature, not an extra.
   counts exist yet. Fix: in the cloud environment settings, set Network
   access to a broader level or add the Overpass hosts to the allowed
   domains, then rerun steps 3 to 5.
+- **2026-10-02 (back on the laptop):** The cloud environment could not reach
+  Overpass, so the download finished locally. 7 of 9 districts were already
+  cached; VA-10 and VA-11 downloaded on the first try. 30,738 businesses in
+  the 9 metro districts (counts in Measured facts). Ran the chain filter and
+  checked its name-only (NSI) matches by hand. Three fixes:
+  1. **Same kind of business.** The name match must be in the same category
+     or category family. Before: an auto body shop matched The Body Shop
+     (cosmetics); restaurants matched Marshalls, European Wax Center and
+     Primrose School. Exact category alone was tried first and was too strict:
+     it let Jersey Mike's, Wawa, Mr. Tire and Home Depot through.
+  2. **Brands in our area only.** Regional NSI brands count only if they
+     operate in DC/MD/VA. Before: "ABC (Hawaii)" and New England's "Market
+     Basket" flagged local shops.
+  3. **Generic names skipped** ("China Wok", "Joe's Pizza", "Mini Mart",
+     "Lucky" and a few more): most are unrelated local shops. Layer 2 decides.
+  NSI-only matches: 231 before the fixes, 131 after. Total chains 11,706
+  before, 11,606 after. Committed `businesses.geojson` (19 MB) and
+  `businesses_layer1.geojson` (20 MB).
