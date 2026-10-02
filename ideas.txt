@@ -4,3 +4,292 @@ this file is to put ideas for everyone to edit with what they want to do with th
 Idea 1: OpenStreetMap database/frontend focused on small businesses.
 
 
+
+That’s a really solid app concept, especially for a Congressional App Challenge project. The key is to make it more than “Google Maps with different pins”: the app should actively surface businesses and communities that are easy to overlook.
+
+The core idea
+
+Think of the app as:
+
+An interactive community-discovery map that combines OpenStreetMap data with information from the web to help users discover independent businesses, local organizations, and underserved areas.
+
+How I would structure it
+
+1. OpenStreetMap = geographic foundation
+
+Use OSM for things like:
+
+Business locations
+Streets and buildings
+Restaurants and cafés
+Shops
+Community centers
+Libraries
+Markets
+Pharmacies
+Places of worship
+Local services
+
+OSM already has a surprisingly rich tagging system. For example, shop=* identifies retail businesses, while amenity=* covers many community facilities.
+
+2. Web search = enrichment
+
+OSM won't necessarily tell you everything you want to know about a business.
+
+Your backend could search the web for each location and collect things such as:
+
+Business
+├── Name
+├── Location
+├── Category
+├── Website
+├── Description
+├── Hours
+├── Phone
+├── Social links
+├── Reviews / public mentions
+└── Community information
+
+Then your app could combine those sources into one profile.
+
+For example:
+
+La Estrella Bakery
+Mexican bakery · Independent
+★ 4.7
+“Family-owned bakery specializing in traditional Mexican pastries.”
+Open until 8 PM
+[Website] [Directions]
+
+The important part is that you don't want the AI/search system inventing information. Every piece of enriched information should have a source and ideally a timestamp.
+
+The interesting part: "underserved"
+
+This is where I think your project could become much more distinctive.
+
+Rather than labeling a neighborhood itself as "underserved," you could create a community needs layer based on publicly available datasets.
+
+For example:
+
+                    MAP
+                      │
+        ┌─────────────┼─────────────┐
+        ↓             ↓             ↓
+   OSM businesses   Web data    Public datasets
+        │             │             │
+        └─────────────┼─────────────┘
+                      ↓
+                Your database
+                      ↓
+              Discovery engine
+                      ↓
+              Interactive map
+
+You could potentially incorporate things like:
+
+Business density
+Access to grocery stores
+Access to pharmacies
+Public transportation
+Internet access
+Population density
+Income statistics
+Food-access statistics
+Distance to important services
+Number of independent businesses
+
+That lets you say something much more defensible than:
+
+"This is an underserved neighborhood."
+
+Instead:
+
+"This area has fewer grocery stores per resident than surrounding areas."
+
+That's a measurable observation, rather than making a broad judgment about the people who live there.
+
+A really cool feature: "Discover Local"
+
+Imagine opening the map and seeing:
+
+Discover nearby
+
+┌─────────────────────────────────┐
+│  🔎 Search                       │
+│                                  │
+│  [Independent] [Food] [Services]│
+│  [Community] [Markets]           │
+│                                  │
+│        MAP                       │
+│                                  │
+│     •       •                    │
+│          ★                       │
+│   •              •              │
+│             •                    │
+│                                  │
+├─────────────────────────────────┤
+│ ★ Recommended nearby             │
+│                                  │
+│ El Rinconcito                     │
+│ Independent Mexican restaurant   │
+│ 0.4 miles away                   │
+│                                  │
+│ Community Market                 │
+│ Local grocery                    │
+│ 0.7 miles away                   │
+└─────────────────────────────────┘
+
+And instead of ranking businesses simply by reviews, your algorithm could prioritize discovery:
+
+Discovery score
+├── Distance
+├── Independent/local status
+├── Information confidence
+├── Category diversity
+├── How frequently it appears
+└── Whether the user has already discovered it
+
+I'd actually avoid calling this a "best businesses" score. The purpose isn't to tell people what's objectively best; it's to help them find things they might otherwise miss.
+
+Your technical architecture
+
+Since you're already working with a web/app project, I'd probably build it roughly like this:
+
+                    FRONTEND
+                 React / Next.js
+                       │
+                       ↓
+              Interactive map
+                       │
+                       ↓
+                    API
+                       │
+          ┌────────────┼────────────┐
+          ↓            ↓            ↓
+     PostgreSQL      OSM data     Search
+     + PostGIS                     API
+          │                         │
+          └────────────┬────────────┘
+                       ↓
+                Business database
+Database
+
+PostgreSQL + PostGIS would be particularly useful because you're dealing with geographic data.
+
+A business could look something like:
+
+business
+---------
+id
+name
+latitude
+longitude
+category
+website
+phone
+osm_id
+independent
+description
+last_verified
+
+Then you can ask questions such as:
+
+SELECT *
+FROM businesses
+WHERE ST_DWithin(
+    location,
+    user_location,
+    2000
+);
+
+Meaning:
+
+Give me businesses within 2 km of the user.
+
+One important OSM consideration
+
+You should build around OSM's actual data model rather than treating it like a giant business directory.
+
+For example, OSM explicitly supports things like shop=*, amenity=*, opening_hours=*, websites, phone numbers, accessibility information, and other attributes.
+
+Also, OSM data is open, but the public OSM website's APIs and tile/geocoding services have their own usage policies. OSM specifically notes that it does not provide a free unlimited map API or tile service for third-party applications.
+
+So for an actual deployed application, I'd design the architecture so you aren't hammering openstreetmap.org directly from every user's browser.
+
+The Congressional App Challenge angle
+
+This could make a very compelling project story:
+
+Problem
+
+Small businesses and community organizations can be difficult to discover because major platforms tend to emphasize businesses with large amounts of online visibility.
+
+Solution
+
+Create an interactive map that combines open geographic data, web information, and public community data to make local businesses and community resources easier to discover.
+
+Impact
+
+Instead of simply asking:
+
+"Where is the nearest Starbucks?"
+
+the app encourages:
+
+"What local businesses and resources exist around me that I didn't know about?"
+
+That gives you a clear problem → technology → community impact narrative.
+
+I'd start with an MVP
+
+Don't try to build the entire system immediately.
+
+Version 1:
+
+Interactive OSM map
+Query nearby businesses
+Filter by category
+Identify independent/local businesses where the data supports it
+Click a business → information panel
+Search/enrich missing information
+Link every external fact to its source
+
+Then Version 2 could add the community-data layer.
+
+Then Version 3 could add personalization/discovery.
+
+That gives you something functional very quickly while leaving plenty of room for impressive features later.
+
+USING JAMIE RASKINS WORDS - HIS MISSION:
+
+1. Corporate consolidation and small businesses
+
+"...the impact is being felt by consumers, workers, and entrepreneurs."
+
+Context: In 2018, Raskin and Rep. Seth Moulton led a letter from the Congressional Antitrust Caucus asking the FTC to review how corporate consolidation affects workers, consumers and small businesses. The letter said open, competitive markets matter to businesses large and small, and warned of growing concentration and market power across the economy.
+Attribution: Rep. Jamie Raskin and the Congressional Antitrust Caucus, letter to the Federal Trade Commission, June 4, 2018.
+Link: raskin.house.gov/media/press-releases/raskin-congressional-antitrust-caucus-lead-letter-ftc-requesting-information
+
+2. Monopoly profits
+
+"...big corporations striving for monopoly profits that jack up prices and depress wages..."
+
+Context: This is from his opening statement as Ranking Member at a 2026 House Judiciary hearing on antitrust enforcement and media consolidation. He argued that mergers are leaving consumers with fewer choices, higher prices and less power. In the full sentence he says the Trump administration keeps siding with these corporations. If you trim it as above, you keep his point about monopolies without the partisan part, and the meaning doesn't change.
+Attribution: Rep. Jamie Raskin, Ranking Member opening statement, House Judiciary Committee, 2026.
+Link: democrats-judiciary.house.gov/media-center/press-releases/ranking-member-raskin-s-opening-statement-at-hearing-on-corrupt-trump-antitrust-deals-driving-media-consolidation-and-higher-costs-for-consumers
+
+3. Big Tech's reach
+
+"Big Tech is rapidly doing to cars what it already did to cell phones."
+
+Context: Raskin and ten House colleagues wrote to FTC Chair Lina Khan and DOJ antitrust chief Jonathan Kanter. They urged more scrutiny of Big Tech's expansion into the auto industry and called it a "creeping capture and takeover." It's a joint letter, so credit it to "Rep. Raskin and colleagues."
+Attribution: Rep. Jamie Raskin et al., letter to the FTC and DOJ, April 1, 2022.
+Link: raskin.house.gov/2022/4/rep-raskin-sends-letter-to-ftc-doj-calling-for-increased-scrutiny-of-big-tech-s-creeping-capture-and-takeover-of-the-auto-industry
+
+Quote #1 is still the strongest for your app because it names entrepreneurs. #3 is the catchiest line for a demo video.
+
+Sources:
+
+2018 Antitrust Caucus letter
+2026 Judiciary hearing statement
+2022 Big Tech auto letter
