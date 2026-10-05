@@ -6,6 +6,8 @@ import dynamic from "next/dynamic";
 import BusinessPanel from "@/components/business/BusinessPanel";
 import CategoryTabs from "@/components/business/CategoryTabs";
 import SearchBox from "@/components/business/SearchBox";
+import DirectionsPanel from "@/components/routing/DirectionsPanel";
+import { useRouteSession } from "@/hooks/useRouteSession";
 import { GROUPS, type GroupFilter } from "@/lib/groups";
 import type { SearchEntry } from "@/lib/search";
 import type { BusinessCollection, DistrictCollection, GroupId } from "@/types/business";
@@ -34,6 +36,7 @@ export default function MapView() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [focus, setFocus] = useState<{ lng: number; lat: number; key: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const navigation = useRouteSession();
 
   useEffect(() => {
     fetch("/data/districts.geojson")
@@ -61,10 +64,37 @@ export default function MapView() {
   const businesses = loadedBusinesses?.districtId === districtId ? loadedBusinesses.data : null;
 
   // Looked up by id so a search pick in another district opens once its data arrives
-  const selected = useMemo(
-    () => businesses?.features.find((feature) => feature.properties.id === selectedId)?.properties ?? null,
+  const selectedFeature = useMemo(
+    () => businesses?.features.find((feature) => feature.properties.id === selectedId) ?? null,
     [businesses, selectedId],
   );
+  const selected = selectedFeature?.properties ?? null;
+
+  const routing = useMemo(
+    () => ({
+      route: navigation.route?.coordinates ?? null,
+      start: navigation.start?.source === "map" ? navigation.start.position : null,
+      user: navigation.position,
+      picking: navigation.picking,
+      following: navigation.live !== null,
+      onPick: navigation.setPickedStart,
+    }),
+    [navigation.route, navigation.start, navigation.position, navigation.picking, navigation.live, navigation.setPickedStart],
+  );
+
+  function openDirections() {
+    if (!selectedFeature) return;
+    navigation.open({
+      id: selectedFeature.properties.id,
+      name: selectedFeature.properties.name,
+      position: selectedFeature.geometry.coordinates as [number, number],
+    });
+  }
+
+  function selectBusiness(id: string | null) {
+    // While directions are open, map clicks don't change the selection
+    if (!navigation.destination) setSelectedId(id);
+  }
 
   const counts = useMemo(() => {
     const result = Object.fromEntries(GROUPS.map((g) => [g.id, 0])) as Record<GroupId, number>;
@@ -131,12 +161,19 @@ export default function MapView() {
             group={group}
             selectedId={selectedId}
             focus={focus}
-            onSelect={setSelectedId}
+            onSelect={selectBusiness}
+            routing={routing}
           />
         )}
         {!businesses && !error && <p className={styles.status}>Loading businesses…</p>}
         {error && <p className={styles.status}>{error}</p>}
-        {selected && <BusinessPanel business={selected} onClose={() => setSelectedId(null)} />}
+        {navigation.destination ? (
+          <DirectionsPanel session={navigation} />
+        ) : (
+          selected && (
+            <BusinessPanel business={selected} onClose={() => setSelectedId(null)} onDirections={openDirections} />
+          )
+        )}
       </div>
     </div>
   );

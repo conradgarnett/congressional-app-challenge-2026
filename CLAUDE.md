@@ -71,6 +71,22 @@ from Overpass through the pipeline; the search bar searches
 `public/data/search.json` in the browser, so it is instant and keeps
 working when Overpass is down.
 
+**Routing uses the public Valhalla server** (`valhalla1.openstreetmap.de`,
+run by FOSSGIS): free, no key, allows browser requests, OSM roads and
+paths. Fair use only. The app re-routes at most once every 10 seconds. For
+real traffic, self-host Valhalla with a DC/MD/VA extract.
+
+**Live navigation follows Organic Maps' design**
+(`libs/routing/routing_session.cpp` in organicmaps/organicmaps). Each
+position update is snapped to the route line. More than 40 m off for 3
+updates in a row means off route, which asks for a new route from the
+current position. Within 25 m of the destination means arrived. Their C++
+router can't be reused in a website: it reads only their own `.mwm` map
+files. **Browsers share location only over HTTPS** (localhost is exempt),
+so the hosted site must use HTTPS. Add `?demo` to the address to get a
+"Simulate trip" button that moves along the route without GPS, for testing
+and demo videos.
+
 **Overpass (the OSM query API) is shared and fragile.**
 - Requests without a descriptive `User-Agent` get `406 Not Acceptable`.
 - Big queries get `504 Gateway Timeout` when the server is busy.
@@ -121,6 +137,11 @@ default export**: use named imports.
     counts; panel with address, hours, phone, website, OSM link.
   - `components/business/SearchBox.tsx` + `lib/search.ts`: search bar over
     every business in every district, by name, street or city.
+  - Directions: `hooks/useRouteSession.ts` (live navigation state: start,
+    route, position, next turn, off-route rerouting, demo trip),
+    `lib/routing/valhalla.ts` (route requests), `lib/routing/geometry.ts`
+    (distances, snapping a position to the route), `lib/routing/format.ts`,
+    `components/routing/DirectionsPanel.tsx`, `types/routing.ts`.
   - `lib/groups.ts`: tab names and pin colors. `types/business.ts`: data types.
 - `public/data/`: the site's data, written by `pipeline/load/export_site_data.py`.
   `districts.geojson` (outlines) and `businesses/<district>.geojson` (one
@@ -291,3 +312,20 @@ why "add a missing business" is a core feature, not an extra.
   layers down to landmarks only. Checked at the same DC block as before:
   Shell and the cart are gone; schools, churches and parks remain. The
   map is also lighter, so pins stand out more.
+- **2026-10-05 (routing):** Added directions with live navigation. Looked
+  through organicmaps/organicmaps first: its router (`libs/routing/`,
+  bidirectional A* in `base/astar_algorithm.hpp`, live session in
+  `routing_session.cpp`) is C++ for its own map files, so the app uses the
+  Valhalla routing service and copies Organic Maps' live-session logic
+  (constants in Constraints). The business panel has a Directions button.
+  The directions panel has: start from your location or a point clicked on
+  the map, Walk/Bike/Drive, time and distance, every step, Start/Stop
+  navigation, and a next-turn banner. The map draws the route under the pins,
+  a start marker and your position, and follows you while navigating.
+  Tested in Chrome with a fake GPS position in Olney, to Sunshine General
+  Store: walk 5.1 mi / 1 hr 42 min, drive 5.7 mi / 10 min; navigation shows
+  the next turn; moving the fake GPS about 300 m off the route for 3
+  updates made exactly 1 new route request, drawn from the new spot; the
+  simulated trip moves along the route. Bug found while testing: the panel
+  is a height-limited flex column, so the Walk/Bike/Drive buttons shrank to
+  nothing; panel children no longer shrink.

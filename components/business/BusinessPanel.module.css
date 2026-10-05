@@ -52,6 +52,19 @@
   font-size: 14px;
 }
 
+.directions {
+  margin-top: 14px;
+  padding: 8px 18px;
+  border: none;
+  border-radius: 999px;
+  background: var(--route);
+  color: #ffffff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .details {
   display: grid;
   grid-template-columns: auto 1fr;

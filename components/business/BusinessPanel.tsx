@@ -5,6 +5,7 @@ import styles from "./BusinessPanel.module.css";
 interface Props {
   business: Business;
   onClose: () => void;
+  onDirections: () => void;
 }
 
 function address(business: Business): string | null {
@@ -17,7 +18,7 @@ function websiteHref(website: string): string {
   return /^https?:\/\//i.test(website) ? website : `https://${website}`;
 }
 
-export default function BusinessPanel({ business, onClose }: Props) {
+export default function BusinessPanel({ business, onClose, onDirections }: Props) {
   const group = GROUPS.find((g) => g.id === business.group);
   const where = address(business);
   const osmUrl = `https://www.openstreetmap.org/${business.id}`;
@@ -38,6 +39,10 @@ export default function BusinessPanel({ business, onClose }: Props) {
         {categoryLabel(business.category)}
         {business.cuisine && ` · ${business.cuisine.replace(/[_;]/g, " ")}`}
       </p>
+
+      <button type="button" className={styles.directions} onClick={onDirections}>
+        Directions
+      </button>
 
       <dl className={styles.details}>
         {where && (

@@ -5,6 +5,8 @@
   --muted: #5f6672;
   --border: #e3e5e8;
   --link: #1f6fb4;
+  --route: #1a73e8;
+  --error: #c0362c;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -15,6 +17,8 @@
     --muted: #a0a7b2;
     --border: #2c313a;
     --link: #7ab6ee;
+    --route: #1a73e8;
+    --error: #ff8a80;
   }
 }
 

@@ -15,6 +15,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 
 import { GROUPS, type GroupFilter } from "@/lib/groups";
 import type { BusinessCollection, DistrictCollection } from "@/types/business";
+import type { LngLat } from "@/types/routing";
 
 // Copied into public/ by scripts/copy-maplibre-worker.mjs
 setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
@@ -46,6 +47,27 @@ function hideBaseMapBusinesses(_previous: StyleSpecification | undefined, next: 
 }
 
 const EMPTY: BusinessCollection = { type: "FeatureCollection", features: [] };
+const EMPTY_FEATURES = { type: "FeatureCollection" as const, features: [] };
+
+const ROUTE_COLOR = "#1a73e8";
+
+/** What the map draws for directions; see hooks/useRouteSession.ts */
+export interface RoutingLayer {
+  route: LngLat[] | null;
+  start: LngLat | null;
+  user: LngLat | null;
+  /** Next map click sets the start point instead of selecting a business */
+  picking: boolean;
+  /** Live navigation: keep the user's position centered */
+  following: boolean;
+  onPick: (point: LngLat) => void;
+}
+
+const pointFeature = (point: LngLat) => ({
+  type: "Feature" as const,
+  properties: {},
+  geometry: { type: "Point" as const, coordinates: point },
+});
 
 // Color each pin by its group: ["match", group, "food", "#d1495b", ..., fallback]
 const GROUP_COLOR = [
@@ -64,6 +86,7 @@ interface Props {
   /** Fly here when it changes (a search pick); `key` lets the same spot re-trigger */
   focus: { lng: number; lat: number; key: number } | null;
   onSelect: (businessId: string | null) => void;
+  routing: RoutingLayer;
 }
 
 function districtBounds(districts: DistrictCollection, districtId: string) {
@@ -78,16 +101,27 @@ function districtBounds(districts: DistrictCollection, districtId: string) {
   return bounds;
 }
 
-export default function BusinessMap({ districts, districtId, businesses, group, selectedId, focus, onSelect }: Props) {
+export default function BusinessMap({
+  districts,
+  districtId,
+  businesses,
+  group,
+  selectedId,
+  focus,
+  onSelect,
+  routing,
+}: Props) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<MapLibreMap | null>(null);
   const [loaded, setLoaded] = useState(false);
 
-  // Keep the latest callback without re-creating the map
+  // Keep the latest callbacks without re-creating the map
   const onSelectRef = useRef(onSelect);
+  const routingRef = useRef(routing);
   useEffect(() => {
     onSelectRef.current = onSelect;
-  }, [onSelect]);
+    routingRef.current = routing;
+  }, [onSelect, routing]);
 
   useEffect(() => {
     if (!container.current) return;
@@ -102,6 +136,9 @@ export default function BusinessMap({ districts, districtId, businesses, group, 
     instance.on("load", () => {
       instance.addSource("districts", { type: "geojson", data: districts });
       instance.addSource("businesses", { type: "geojson", data: EMPTY });
+      instance.addSource("route", { type: "geojson", data: EMPTY_FEATURES });
+      instance.addSource("route-start", { type: "geojson", data: EMPTY_FEATURES });
+      instance.addSource("user", { type: "geojson", data: EMPTY_FEATURES });
 
       instance.addLayer({
         id: "district-outline",
@@ -115,6 +152,21 @@ export default function BusinessMap({ districts, districtId, businesses, group, 
         source: "districts",
         filter: ["==", ["get", "id"], ""],
         paint: { "line-color": "#111827", "line-width": 3 },
+      });
+      // Route under the pins so it never hides a business
+      instance.addLayer({
+        id: "route-casing",
+        type: "line",
+        source: "route",
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: { "line-color": "#ffffff", "line-width": ["interpolate", ["linear"], ["zoom"], 10, 6, 16, 12] },
+      });
+      instance.addLayer({
+        id: "route-line",
+        type: "line",
+        source: "route",
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: { "line-color": ROUTE_COLOR, "line-width": ["interpolate", ["linear"], ["zoom"], 10, 3.5, 16, 8] },
       });
       instance.addLayer({
         id: "businesses",
@@ -141,19 +193,42 @@ export default function BusinessMap({ districts, districtId, businesses, group, 
         },
       });
 
-      instance.on("click", "businesses", (event) => {
-        const feature = event.features?.[0];
-        if (feature) onSelectRef.current(feature.properties.id as string);
+      instance.addLayer({
+        id: "route-start",
+        type: "circle",
+        source: "route-start",
+        paint: {
+          "circle-color": "#ffffff",
+          "circle-radius": 7,
+          "circle-stroke-color": "#111827",
+          "circle-stroke-width": 3,
+        },
       });
+      instance.addLayer({
+        id: "user",
+        type: "circle",
+        source: "user",
+        paint: {
+          "circle-color": ROUTE_COLOR,
+          "circle-radius": 8,
+          "circle-stroke-color": "#ffffff",
+          "circle-stroke-width": 3,
+        },
+      });
+
       instance.on("click", (event) => {
+        if (routingRef.current.picking) {
+          routingRef.current.onPick([event.lngLat.lng, event.lngLat.lat]);
+          return;
+        }
         const hits = instance.queryRenderedFeatures(event.point, { layers: ["businesses"] });
-        if (hits.length === 0) onSelectRef.current(null);
+        onSelectRef.current(hits.length > 0 ? (hits[0].properties.id as string) : null);
       });
       instance.on("mouseenter", "businesses", () => {
-        instance.getCanvas().style.cursor = "pointer";
+        if (!routingRef.current.picking) instance.getCanvas().style.cursor = "pointer";
       });
       instance.on("mouseleave", "businesses", () => {
-        instance.getCanvas().style.cursor = "";
+        instance.getCanvas().style.cursor = routingRef.current.picking ? "crosshair" : "";
       });
 
       setLoaded(true);
@@ -195,6 +270,48 @@ export default function BusinessMap({ districts, districtId, businesses, group, 
     if (!loaded || !map.current) return;
     map.current.setFilter("businesses", group === "all" ? null : ["==", ["get", "group"], group]);
   }, [loaded, group]);
+
+  useEffect(() => {
+    if (!loaded || !map.current) return;
+    map.current.getCanvas().style.cursor = routing.picking ? "crosshair" : "";
+  }, [loaded, routing.picking]);
+
+  useEffect(() => {
+    if (!loaded || !map.current) return;
+    const line = routing.route;
+    (map.current.getSource("route") as GeoJSONSource).setData(
+      line
+        ? { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: line } }
+        : EMPTY_FEATURES,
+    );
+    // Show the whole route when it first appears, but not while navigating
+    if (line && !routingRef.current.following) {
+      const bounds = new LngLatBounds();
+      for (const point of line) bounds.extend(point);
+      // Leave room for the directions panel: on the left on wide screens, at the bottom on phones
+      const { clientWidth, clientHeight } = map.current.getContainer();
+      const padding =
+        clientWidth < 640
+          ? { top: 40, bottom: Math.round(clientHeight * 0.6), left: 30, right: 30 }
+          : { top: 60, bottom: 60, left: 420, right: 60 };
+      map.current.fitBounds(bounds, { padding, maxZoom: 17 });
+    }
+  }, [loaded, routing.route]);
+
+  useEffect(() => {
+    if (!loaded || !map.current) return;
+    const start = routing.start;
+    (map.current.getSource("route-start") as GeoJSONSource).setData(start ? pointFeature(start) : EMPTY_FEATURES);
+  }, [loaded, routing.start]);
+
+  useEffect(() => {
+    if (!loaded || !map.current) return;
+    const user = routing.user;
+    (map.current.getSource("user") as GeoJSONSource).setData(user ? pointFeature(user) : EMPTY_FEATURES);
+    if (user && routing.following) {
+      map.current.easeTo({ center: user, zoom: Math.max(map.current.getZoom(), 16), duration: 900 });
+    }
+  }, [loaded, routing.user, routing.following]);
 
   return <div ref={container} style={{ position: "absolute", inset: 0 }} />;
 }
