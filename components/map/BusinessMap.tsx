@@ -7,6 +7,7 @@ import {
   NavigationControl,
   setWorkerUrl,
   type ExpressionSpecification,
+  type FilterSpecification,
   type GeoJSONSource,
   type StyleSpecification,
 } from "maplibre-gl";
@@ -18,20 +19,31 @@ import type { BusinessCollection, DistrictCollection } from "@/types/business";
 // Copied into public/ by scripts/copy-maplibre-worker.mjs
 setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
 
-// OSM's public tile server: fine for the demo, not for heavy traffic (see CLAUDE.md)
-const BASE_STYLE: StyleSpecification = {
-  version: 8,
-  sources: {
-    osm: {
-      type: "raster",
-      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-      tileSize: 256,
-      maxzoom: 19,
-      attribution: "© OpenStreetMap contributors",
-    },
-  },
-  layers: [{ id: "osm", type: "raster", source: "osm" }],
-};
+// OpenFreeMap: free OSM vector tiles, no key. Vector (not image) tiles let us
+// hide the base map's own business icons, so chains like Shell or Walmart
+// don't show up next to our small-business pins.
+const BASE_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
+
+// Landmark icons that stay on the base map. Every other point of interest
+// (shops, restaurants, gas stations, banks...) is hidden.
+const LANDMARK_CLASSES = [
+  "park", "school", "college", "hospital", "place_of_worship", "library",
+  "town_hall", "police", "fire_station", "post", "museum", "attraction",
+  "zoo", "stadium", "cemetery", "playground", "campsite", "swimming",
+  "information", "airport", "bus", "rail",
+];
+
+function hideBaseMapBusinesses(_previous: StyleSpecification | undefined, next: StyleSpecification) {
+  const onlyLandmarks = ["in", ["get", "class"], ["literal", LANDMARK_CLASSES]];
+  return {
+    ...next,
+    layers: next.layers.map((layer) => {
+      if (!("source-layer" in layer) || layer["source-layer"] !== "poi") return layer;
+      const filter = (layer.filter ? ["all", layer.filter, onlyLandmarks] : onlyLandmarks) as FilterSpecification;
+      return { ...layer, filter };
+    }),
+  };
+}
 
 const EMPTY: BusinessCollection = { type: "FeatureCollection", features: [] };
 
@@ -81,10 +93,10 @@ export default function BusinessMap({ districts, districtId, businesses, group, 
     if (!container.current) return;
     const instance = new MapLibreMap({
       container: container.current,
-      style: BASE_STYLE,
       center: [-77.1, 39.05],
       zoom: 10,
     });
+    instance.setStyle(BASE_STYLE_URL, { transformStyle: hideBaseMapBusinesses });
     instance.addControl(new NavigationControl({ showCompass: false }), "top-right");
 
     instance.on("load", () => {

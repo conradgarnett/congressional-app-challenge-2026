@@ -85,9 +85,12 @@ publicapis.io/open-street-map-api):
   A few hundred moderate queries a day on public servers.
 - **Address search → Nominatim.** Max 1 request per second, descriptive
   User-Agent, no bulk geocoding. OK for a search box on the site.
-- **Map display → Leaflet or MapLibre with OSM tiles.** The public tile
-  server is for light use: fine for the demo, switch to a tile provider
-  (MapTiler, Thunderforest) if real traffic comes.
+- **Map display → MapLibre with OpenFreeMap vector tiles** (free, no key,
+  OSM data). Not OSM's standard image tiles: those have every shop and gas
+  station drawn in, chains included, and image tiles can't hide single
+  icons. `BusinessMap.tsx` hides every base-map point of interest except
+  landmarks (parks, schools, hospitals, churches, libraries, transit...).
+  The style's own highway-shield console warnings are harmless.
 - **"Add a missing business" → editing API v0.6** at api.openstreetmap.org.
   Needs OAuth 2.0 (`write_api` scope, `Authorization: Bearer <token>`).
   Never use it for bulk reads: its bounding-box size is capped.
@@ -281,3 +284,10 @@ why "add a missing business" is a core feature, not an extra.
   matches across 3 districts; picking "#1 Beauty Supply" from MD-08 switched
   to DC and opened its panel. Also excluded the copied MapLibre worker from
   lint (it produced 1,126 warnings that were not ours).
+- **2026-10-05 (base map):** Conrad noticed chains (Shell, a Walmart-style
+  shopping cart) still showing on the map, though not as our pins: they
+  were drawn into OSM's standard image tiles. Switched the base map to
+  OpenFreeMap's "Liberty" vector style and filtered its point-of-interest
+  layers down to landmarks only. Checked at the same DC block as before:
+  Shell and the cart are gone; schools, churches and parks remain. The
+  map is also lighter, so pins stand out more.
