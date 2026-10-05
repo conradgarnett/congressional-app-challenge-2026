@@ -89,6 +89,14 @@ publicapis.io/open-street-map-api):
 - **Attribution is required** by the ODbL licence: show
   "© OpenStreetMap contributors" on the map.
 
+**MapLibre 6 loads its worker from a separate file.** Next.js bundles
+MapLibre's main code into a chunk, so the worker's default relative URL
+breaks ("Worker failed to load") and the map shows tiles but no pins or
+outlines. `scripts/copy-maplibre-worker.mjs` copies the worker into
+`public/maplibre/` on `npm install`, `npm run dev` and `npm run build`, and
+`BusinessMap.tsx` calls `setWorkerUrl` on it. MapLibre 6 also has **no
+default export**: use named imports.
+
 **Next.js 16 is newer than most training data.** Read
 `node_modules/next/dist/docs/` before writing app code (see `AGENTS.md`).
 `next dev` rewrites the block in `AGENTS.md`; this file is left alone.
@@ -97,6 +105,16 @@ publicapis.io/open-street-map-api):
 
 - `app/`, `components/`, `features/`, `lib/`, `hooks/`, `types/`: Next.js
   site (App Router, TypeScript). Folder plan from `prompt.md`.
+  - `app/page.tsx` renders `components/map/MapView.tsx`: district picker,
+    category tabs, map, info panel. Opens on MD-08, all groups.
+  - `components/map/BusinessMap.tsx`: the MapLibre map (browser only,
+    loaded with `ssr: false`).
+  - `components/business/CategoryTabs.tsx`, `BusinessPanel.tsx`: tabs with
+    counts; panel with address, hours, phone, website, OSM link.
+  - `lib/groups.ts`: tab names and pin colors. `types/business.ts`: data types.
+- `public/data/`: the site's data, written by `pipeline/load/export_site_data.py`.
+  `districts.geojson` (outlines) and `businesses/<district>.geojson` (one
+  small file per district, MD-08 is 0.47 MB).
 - `pipeline/`: offline Python data jobs. Not part of the site.
   - `fetch/districts.py`: district boundaries → `data/processed/districts.geojson`
   - `fetch/businesses.py`: OSM businesses per district → `data/processed/businesses.geojson`
@@ -104,6 +122,7 @@ publicapis.io/open-street-map-api):
   - `filter/groups/assign_groups.py`: drops chains, unnamed places and
     non-businesses, assigns map groups → `data/processed/small_businesses.geojson`
   - `filter/national`, `filter/matching`: layers 2 and 3 (not built yet)
+  - `load/export_site_data.py`: slim per-district files for the site → `public/data/`
 - `data/raw/`: downloads and caches, git-ignored. `data/processed/`: pipeline
   output, committed.
 
@@ -115,6 +134,9 @@ python3 -m venv .venv
 .venv/bin/pip install -r pipeline/requirements.txt
 .venv/bin/python pipeline/fetch/districts.py    # boundaries
 .venv/bin/python pipeline/fetch/businesses.py   # metro districts; --all for all 20
+.venv/bin/python pipeline/filter/chains/filter_chains.py
+.venv/bin/python pipeline/filter/groups/assign_groups.py
+.venv/bin/python pipeline/load/export_site_data.py   # writes public/data/ for the site
 ```
 
 ## Measured facts
@@ -228,3 +250,14 @@ why "add a missing business" is a core feature, not an extra.
   vape shops, keep tobacco and cannabis shops. Removed 95: 51 tagged
   `shop=e-cigarette` plus 44 tagged `shop=tobacco` whose names say vape
   ("Tobacco & Vape", "Vape Jungle"). 17,155 left, 1,642 in MD-08.
+- **2026-10-05 (map page):** Built the first real page. MapLibre map with
+  OSM tiles, all 9 metro districts outlined, the chosen district in bold,
+  one pin per small business colored by group, tabs with live counts
+  (All 1,642 in MD-08), and an info panel on click. Added
+  `pipeline/load/export_site_data.py` to write one small data file per
+  district into `public/data/`. Removed the Next.js starter page and images.
+  Checked in a real browser (Playwright driving Chrome): MD-08 loads with
+  1,642 pins; the Groceries tab shows only its 167; clicking a pin opens its
+  panel (tested on Sunshine General Store, Brookeville); switching to VA-08
+  loads 2,523. First attempt showed tiles but no pins: MapLibre 6's worker
+  file did not load (see Constraints). Lint, type check and build pass.

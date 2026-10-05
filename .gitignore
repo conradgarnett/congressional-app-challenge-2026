@@ -44,3 +44,6 @@ next-env.d.ts
 /data/raw/
 __pycache__/
 .venv/
+
+# MapLibre worker, copied from node_modules on install
+/public/maplibre/
