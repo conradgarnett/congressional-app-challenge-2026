@@ -52,7 +52,8 @@ change makes a rule or fact above the Log wrong, fix that section too.
 
 Every small business sits in one of five groups, and the map has a tab for
 each: **Food & drink, Groceries & essentials, Personal care, Services,
-Shopping.** The map opens on **all groups**: Conrad decided against making
+Shopping.** Vape shops are left out entirely (team decision for the school
+demo); plain tobacco and cannabis shops stay. The map opens on **all groups**: Conrad decided against making
 food the default view. Groups are assigned in
 `pipeline/filter/groups/assign_groups.py`; any shop type not listed there
 falls into Shopping, and any trade (`craft=*`) into Services.
@@ -146,22 +147,22 @@ name match. Brand tags do almost all the work; NSI catches chains that
 mappers forgot to tag.
 
 **Small businesses by map group, 2026-10-05** (chains, unnamed places and
-non-businesses removed; layer 2 not run yet):
+non-businesses and vape shops removed; layer 2 not run yet):
 
 | district | food | groceries | personal care | services | shopping | total |
 |---|---|---|---|---|---|---|
-| DC-AL | 1,917 | 512 | 350 | 245 | 529 | 3,553 |
-| MD-04 | 355 | 110 | 121 | 108 | 141 | 835 |
-| MD-05 | 360 | 146 | 128 | 131 | 184 | 949 |
-| MD-06 | 733 | 234 | 228 | 239 | 399 | 1,833 |
-| **MD-08** | **721** | **167** | **221** | **224** | **312** | **1,645** |
-| VA-07 | 679 | 180 | 345 | 362 | 594 | 2,160 |
-| VA-08 | 1,228 | 150 | 385 | 301 | 476 | 2,540 |
-| VA-10 | 848 | 149 | 256 | 221 | 414 | 1,888 |
-| VA-11 | 906 | 85 | 279 | 199 | 378 | 1,847 |
+| DC-AL | 1,917 | 512 | 350 | 245 | 523 | 3,547 |
+| MD-04 | 355 | 110 | 121 | 108 | 140 | 834 |
+| MD-05 | 360 | 146 | 128 | 131 | 177 | 942 |
+| MD-06 | 733 | 234 | 228 | 239 | 381 | 1,815 |
+| **MD-08** | **721** | **167** | **221** | **224** | **309** | **1,642** |
+| VA-07 | 679 | 180 | 345 | 362 | 570 | 2,136 |
+| VA-08 | 1,228 | 150 | 385 | 301 | 459 | 2,523 |
+| VA-10 | 848 | 149 | 256 | 221 | 403 | 1,877 |
+| VA-11 | 906 | 85 | 279 | 199 | 370 | 1,839 |
 
 All 9 metro districts: 30,738 businesses → 19,132 after chains → 17,435
-after unnamed → **17,250** after non-businesses.
+after unnamed → 17,250 after non-businesses → **17,155** after vape shops.
 
 OSM coverage is partial: the real number of businesses is far higher. That is
 why "add a missing business" is a core feature, not an extra.
@@ -223,4 +224,7 @@ why "add a missing business" is a core feature, not an extra.
   pickup points, vending machines). Result: 17,250 small businesses in the
   metro districts, 1,645 in MD-08 (table in Measured facts). Open question:
   Shopping includes about 325 tobacco, vape and cannabis shops (all legal);
-  decide whether the school demo shows them.
+  decide whether the school demo shows them. Decided the same day: drop all
+  vape shops, keep tobacco and cannabis shops. Removed 95: 51 tagged
+  `shop=e-cigarette` plus 44 tagged `shop=tobacco` whose names say vape
+  ("Tobacco & Vape", "Vape Jungle"). 17,155 left, 1,642 in MD-08.
