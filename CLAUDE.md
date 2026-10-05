@@ -58,6 +58,14 @@ food the default view. Groups are assigned in
 `pipeline/filter/groups/assign_groups.py`; any shop type not listed there
 falls into Shopping, and any trade (`craft=*`) into Services.
 
+Inside a tab, a second row of **type chips** narrows further: OSM cuisines
+(Italian, Pizza, Chinese...) and OSM types (Cafe, Bakery, Hairdresser...),
+most common first, with counts. A business can carry several tags: a pizza
+restaurant is both "Pizza" and "Restaurant". Tags are built in the browser
+from data the site already has (`lib/tags.ts`); no pipeline step. Chosen
+instead of an AI model for generic searches ("pizza place"): no API key,
+instant, works offline, and can't invent businesses.
+
 ## Constraints that will break things if ignored
 
 **District lines are the Census 119th Congress boundaries.** Virginia voters
@@ -135,6 +143,8 @@ default export**: use named imports.
     loaded with `ssr: false`).
   - `components/business/CategoryTabs.tsx`, `BusinessPanel.tsx`: tabs with
     counts; panel with address, hours, phone, website, OSM link.
+  - `components/business/TagFilter.tsx` + `lib/tags.ts`: type chips inside
+    a category tab.
   - `components/business/SearchBox.tsx` + `lib/search.ts`: search bar over
     every business in every district, by name, street or city.
   - Directions: `hooks/useRouteSession.ts` (live navigation state: start,
@@ -329,3 +339,14 @@ why "add a missing business" is a core feature, not an extra.
   simulated trip moves along the route. Bug found while testing: the panel
   is a height-limited flex column, so the Walk/Bike/Drive buttons shrank to
   nothing; panel children no longer shrink.
+- **2026-10-05 (type chips):** Discussed an NVIDIA-hosted AI model for
+  generic searches ("pizza place", "chinese food"); Conrad chose a tag
+  filter instead. Picking a category tab now shows chips for the types
+  inside it. In MD-08 Food & drink: Restaurant 483, Cafe 73, Fast food 53,
+  Chinese 49, Mexican 39, Pizza 38, American 35, Bakery 35, Italian 26 and
+  46 more behind "More". Personal care: Beauty 93, Hairdresser 92, Optician
+  14, Massage 8, Tattoo 8... Across the metro area 68% of food places
+  (5,278 of 7,747) have an OSM cuisine tag; the rest still appear under
+  their type (Restaurant, Cafe...). Changing tab or district clears the
+  chip; a search pick clears it so the result isn't hidden. Tested in
+  Chrome: choosing Italian in MD-08 leaves only its 26 pins.

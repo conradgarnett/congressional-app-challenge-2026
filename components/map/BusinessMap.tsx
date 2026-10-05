@@ -82,6 +82,8 @@ interface Props {
   districtId: string;
   businesses: BusinessCollection | null;
   group: GroupFilter;
+  /** A type inside the group, e.g. "pizza"; see lib/tags.ts */
+  tag: string | null;
   selectedId: string | null;
   /** Fly here when it changes (a search pick); `key` lets the same spot re-trigger */
   focus: { lng: number; lat: number; key: number } | null;
@@ -106,6 +108,7 @@ export default function BusinessMap({
   districtId,
   businesses,
   group,
+  tag,
   selectedId,
   focus,
   onSelect,
@@ -268,8 +271,12 @@ export default function BusinessMap({
 
   useEffect(() => {
     if (!loaded || !map.current) return;
-    map.current.setFilter("businesses", group === "all" ? null : ["==", ["get", "group"], group]);
-  }, [loaded, group]);
+    const conditions: ExpressionSpecification[] = [];
+    if (group !== "all") conditions.push(["==", ["get", "group"], group]);
+    // tags look like ";pizza;italian;restaurant;", so ";pizza;" matches whole tags only
+    if (tag) conditions.push(["in", `;${tag};`, ["get", "tags"]]);
+    map.current.setFilter("businesses", conditions.length === 0 ? null : ["all", ...conditions]);
+  }, [loaded, group, tag]);
 
   useEffect(() => {
     if (!loaded || !map.current) return;

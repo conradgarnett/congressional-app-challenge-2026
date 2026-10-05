@@ -6,10 +6,12 @@ import dynamic from "next/dynamic";
 import BusinessPanel from "@/components/business/BusinessPanel";
 import CategoryTabs from "@/components/business/CategoryTabs";
 import SearchBox from "@/components/business/SearchBox";
+import TagFilter from "@/components/business/TagFilter";
 import DirectionsPanel from "@/components/routing/DirectionsPanel";
 import { useRouteSession } from "@/hooks/useRouteSession";
 import { GROUPS, type GroupFilter } from "@/lib/groups";
 import type { SearchEntry } from "@/lib/search";
+import { hasTag, tagOptions, withTags } from "@/lib/tags";
 import type { BusinessCollection, DistrictCollection, GroupId } from "@/types/business";
 import styles from "./MapView.module.css";
 
@@ -33,6 +35,7 @@ export default function MapView() {
     null,
   );
   const [group, setGroup] = useState<GroupFilter>("all");
+  const [tag, setTag] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [focus, setFocus] = useState<{ lng: number; lat: number; key: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -50,7 +53,7 @@ export default function MapView() {
     fetch(`/data/businesses/${districtId}.geojson`)
       .then((response) => (response.ok ? response.json() : Promise.reject(response.statusText)))
       .then((data: BusinessCollection) => {
-        if (!cancelled) setLoadedBusinesses({ districtId, data });
+        if (!cancelled) setLoadedBusinesses({ districtId, data: withTags(data) });
       })
       .catch(() => {
         if (!cancelled) setError(`Could not load businesses for ${districtId}.`);
@@ -96,6 +99,8 @@ export default function MapView() {
     if (!navigation.destination) setSelectedId(id);
   }
 
+  const tags = useMemo(() => (group === "all" ? [] : tagOptions(businesses, group)), [businesses, group]);
+
   const counts = useMemo(() => {
     const result = Object.fromEntries(GROUPS.map((g) => [g.id, 0])) as Record<GroupId, number>;
     for (const feature of businesses?.features ?? []) result[feature.properties.group] += 1;
@@ -114,17 +119,25 @@ export default function MapView() {
   function changeDistrict(id: string) {
     setDistrictId(id);
     setSelectedId(null);
+    setTag(null); // the new district may not have this type
     setError(null);
   }
 
   function changeGroup(next: GroupFilter) {
     setGroup(next);
+    setTag(null);
     if (selected && next !== "all" && selected.group !== next) setSelectedId(null);
+  }
+
+  function changeTag(next: string | null) {
+    setTag(next);
+    if (selected && next && !hasTag(selected, next)) setSelectedId(null);
   }
 
   function pickSearchResult(entry: SearchEntry) {
     if (entry.district !== districtId) changeDistrict(entry.district);
     if (group !== "all" && group !== entry.group) setGroup("all");
+    setTag(null); // a search pick must not be hidden by a type filter
     setSelectedId(entry.id);
     setFocus({ lng: entry.lng, lat: entry.lat, key: Date.now() });
   }
@@ -151,6 +164,15 @@ export default function MapView() {
       </header>
 
       <CategoryTabs selected={group} counts={counts} onChange={changeGroup} />
+      {group !== "all" && (
+        <TagFilter
+          key={group}
+          groupLabel={GROUPS.find((g) => g.id === group)?.label ?? ""}
+          options={tags}
+          selected={tag}
+          onChange={changeTag}
+        />
+      )}
 
       <div className={styles.mapArea}>
         {districts && (
@@ -159,6 +181,7 @@ export default function MapView() {
             districtId={districtId}
             businesses={businesses}
             group={group}
+            tag={tag}
             selectedId={selectedId}
             focus={focus}
             onSelect={selectBusiness}

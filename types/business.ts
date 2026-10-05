@@ -17,6 +17,8 @@ export interface Business {
   street?: string;
   city?: string;
   postcode?: string;
+  /** Added in the browser by lib/tags.ts: ";pizza;italian;restaurant;" */
+  tags?: string;
 }
 
 export interface District {
