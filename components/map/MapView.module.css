@@ -20,6 +20,10 @@
   line-height: 1.2;
 }
 
+.header > div:first-child {
+  flex-shrink: 0;
+}
+
 .subtitle {
   color: var(--muted);
   font-size: 13px;

@@ -13,7 +13,7 @@ import {
 import "maplibre-gl/dist/maplibre-gl.css";
 
 import { GROUPS, type GroupFilter } from "@/lib/groups";
-import type { Business, BusinessCollection, DistrictCollection } from "@/types/business";
+import type { BusinessCollection, DistrictCollection } from "@/types/business";
 
 // Copied into public/ by scripts/copy-maplibre-worker.mjs
 setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
@@ -48,7 +48,10 @@ interface Props {
   districtId: string;
   businesses: BusinessCollection | null;
   group: GroupFilter;
-  onSelect: (business: Business | null) => void;
+  selectedId: string | null;
+  /** Fly here when it changes (a search pick); `key` lets the same spot re-trigger */
+  focus: { lng: number; lat: number; key: number } | null;
+  onSelect: (businessId: string | null) => void;
 }
 
 function districtBounds(districts: DistrictCollection, districtId: string) {
@@ -63,7 +66,7 @@ function districtBounds(districts: DistrictCollection, districtId: string) {
   return bounds;
 }
 
-export default function BusinessMap({ districts, districtId, businesses, group, onSelect }: Props) {
+export default function BusinessMap({ districts, districtId, businesses, group, selectedId, focus, onSelect }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<MapLibreMap | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -113,9 +116,22 @@ export default function BusinessMap({ districts, districtId, businesses, group, 
         },
       });
 
+      instance.addLayer({
+        id: "business-selected",
+        type: "circle",
+        source: "businesses",
+        filter: ["==", ["get", "id"], ""],
+        paint: {
+          "circle-color": GROUP_COLOR,
+          "circle-radius": 11,
+          "circle-stroke-color": "#111827",
+          "circle-stroke-width": 3,
+        },
+      });
+
       instance.on("click", "businesses", (event) => {
         const feature = event.features?.[0];
-        if (feature) onSelectRef.current(feature.properties as Business);
+        if (feature) onSelectRef.current(feature.properties.id as string);
       });
       instance.on("click", (event) => {
         const hits = instance.queryRenderedFeatures(event.point, { layers: ["businesses"] });
@@ -146,6 +162,17 @@ export default function BusinessMap({ districts, districtId, businesses, group, 
     const bounds = districtBounds(districts, districtId);
     if (bounds) map.current.fitBounds(bounds, { padding: 40, duration: 800 });
   }, [loaded, districts, districtId]);
+
+  // Declared after the district effect so a search pick's flyTo wins over fitBounds
+  useEffect(() => {
+    if (!loaded || !map.current || !focus) return;
+    map.current.flyTo({ center: [focus.lng, focus.lat], zoom: Math.max(map.current.getZoom(), 16) });
+  }, [loaded, focus]);
+
+  useEffect(() => {
+    if (!loaded || !map.current) return;
+    map.current.setFilter("business-selected", ["==", ["get", "id"], selectedId ?? ""]);
+  }, [loaded, selectedId]);
 
   useEffect(() => {
     if (!loaded || !map.current) return;

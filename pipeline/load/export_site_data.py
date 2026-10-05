@@ -7,6 +7,7 @@ visitor downloads just the district they are looking at.
 Input:  data/processed/districts.geojson, data/processed/small_businesses.geojson
 Output: public/data/districts.geojson          (simplified outlines + counts)
         public/data/businesses/<district>.geojson
+        public/data/search.json                 (every business name, for the search bar)
 Run from repo root: .venv/bin/python pipeline/load/export_site_data.py
 """
 
@@ -87,7 +88,26 @@ def main() -> None:
             {"type": "FeatureCollection", "features": features},
         )
 
-    for path in sorted(SITE_DATA.rglob("*.geojson")):
+    # Search index: one compact row per business across every district, so the
+    # search bar can find a business without loading every district's file.
+    # Row: [id, name, district, group, category, street, city, lon, lat]
+    rows = [
+        [
+            row["osm_id"],
+            row["name"],
+            row["district"],
+            row["group"],
+            row["category"],
+            row.get("addr:street") if isinstance(row.get("addr:street"), str) else "",
+            row.get("addr:city") if isinstance(row.get("addr:city"), str) else "",
+            round(row.geometry.x, COORDINATE_DECIMALS),
+            round(row.geometry.y, COORDINATE_DECIMALS),
+        ]
+        for _, row in businesses.sort_values("name").iterrows()
+    ]
+    write_json(SITE_DATA / "search.json", {"rows": rows})
+
+    for path in sorted([*SITE_DATA.rglob("*.geojson"), SITE_DATA / "search.json"]):
         print(f"{path.relative_to(ROOT)}: {path.stat().st_size / 1_000_000:.2f} MB")
 
 

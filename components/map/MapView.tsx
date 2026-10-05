@@ -5,8 +5,10 @@ import dynamic from "next/dynamic";
 
 import BusinessPanel from "@/components/business/BusinessPanel";
 import CategoryTabs from "@/components/business/CategoryTabs";
+import SearchBox from "@/components/business/SearchBox";
 import { GROUPS, type GroupFilter } from "@/lib/groups";
-import type { Business, BusinessCollection, DistrictCollection, GroupId } from "@/types/business";
+import type { SearchEntry } from "@/lib/search";
+import type { BusinessCollection, DistrictCollection, GroupId } from "@/types/business";
 import styles from "./MapView.module.css";
 
 // MapLibre needs the browser (window, WebGL), so skip server rendering
@@ -29,7 +31,8 @@ export default function MapView() {
     null,
   );
   const [group, setGroup] = useState<GroupFilter>("all");
-  const [selected, setSelected] = useState<Business | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [focus, setFocus] = useState<{ lng: number; lat: number; key: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -57,6 +60,12 @@ export default function MapView() {
   // Ignore data from the previous district while the new one loads
   const businesses = loadedBusinesses?.districtId === districtId ? loadedBusinesses.data : null;
 
+  // Looked up by id so a search pick in another district opens once its data arrives
+  const selected = useMemo(
+    () => businesses?.features.find((feature) => feature.properties.id === selectedId)?.properties ?? null,
+    [businesses, selectedId],
+  );
+
   const counts = useMemo(() => {
     const result = Object.fromEntries(GROUPS.map((g) => [g.id, 0])) as Record<GroupId, number>;
     for (const feature of businesses?.features ?? []) result[feature.properties.group] += 1;
@@ -74,13 +83,20 @@ export default function MapView() {
 
   function changeDistrict(id: string) {
     setDistrictId(id);
-    setSelected(null);
+    setSelectedId(null);
     setError(null);
   }
 
   function changeGroup(next: GroupFilter) {
     setGroup(next);
-    if (selected && next !== "all" && selected.group !== next) setSelected(null);
+    if (selected && next !== "all" && selected.group !== next) setSelectedId(null);
+  }
+
+  function pickSearchResult(entry: SearchEntry) {
+    if (entry.district !== districtId) changeDistrict(entry.district);
+    if (group !== "all" && group !== entry.group) setGroup("all");
+    setSelectedId(entry.id);
+    setFocus({ lng: entry.lng, lat: entry.lat, key: Date.now() });
   }
 
   return (
@@ -90,6 +106,7 @@ export default function MapView() {
           <h1 className={styles.title}>Local Map</h1>
           <p className={styles.subtitle}>Independent small businesses, by congressional district</p>
         </div>
+        <SearchBox currentDistrict={districtId} onPick={pickSearchResult} />
         <label className={styles.picker}>
           <span>District</span>
           <select value={districtId} onChange={(event) => changeDistrict(event.target.value)}>
@@ -112,12 +129,14 @@ export default function MapView() {
             districtId={districtId}
             businesses={businesses}
             group={group}
-            onSelect={setSelected}
+            selectedId={selectedId}
+            focus={focus}
+            onSelect={setSelectedId}
           />
         )}
         {!businesses && !error && <p className={styles.status}>Loading businesses…</p>}
         {error && <p className={styles.status}>{error}</p>}
-        {selected && <BusinessPanel business={selected} onClose={() => setSelected(null)} />}
+        {selected && <BusinessPanel business={selected} onClose={() => setSelectedId(null)} />}
       </div>
     </div>
   );

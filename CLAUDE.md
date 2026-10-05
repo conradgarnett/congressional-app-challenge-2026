@@ -66,6 +66,11 @@ it down in May. Maryland's Senate refused to take up a new map. If either state
 redraws, update `DISTRICTS_URL` in `pipeline/fetch/districts.py` and rerun the
 pipeline. Nothing else hardcodes district shapes.
 
+**Search never calls Overpass live.** Every business name already comes
+from Overpass through the pipeline; the search bar searches
+`public/data/search.json` in the browser, so it is instant and keeps
+working when Overpass is down.
+
 **Overpass (the OSM query API) is shared and fragile.**
 - Requests without a descriptive `User-Agent` get `406 Not Acceptable`.
 - Big queries get `504 Gateway Timeout` when the server is busy.
@@ -111,10 +116,14 @@ default export**: use named imports.
     loaded with `ssr: false`).
   - `components/business/CategoryTabs.tsx`, `BusinessPanel.tsx`: tabs with
     counts; panel with address, hours, phone, website, OSM link.
+  - `components/business/SearchBox.tsx` + `lib/search.ts`: search bar over
+    every business in every district, by name, street or city.
   - `lib/groups.ts`: tab names and pin colors. `types/business.ts`: data types.
 - `public/data/`: the site's data, written by `pipeline/load/export_site_data.py`.
   `districts.geojson` (outlines) and `businesses/<district>.geojson` (one
-  small file per district, MD-08 is 0.47 MB).
+  small file per district, MD-08 is 0.47 MB). `search.json`: every
+  business name across all districts for the search bar (2 MB, 0.55 MB
+  compressed), loaded only when someone clicks into the search bar.
 - `pipeline/`: offline Python data jobs. Not part of the site.
   - `fetch/districts.py`: district boundaries → `data/processed/districts.geojson`
   - `fetch/businesses.py`: OSM businesses per district → `data/processed/businesses.geojson`
@@ -261,3 +270,14 @@ why "add a missing business" is a core feature, not an extra.
   panel (tested on Sunshine General Store, Brookeville); switching to VA-08
   loads 2,523. First attempt showed tiles but no pins: MapLibre 6's worker
   file did not load (see Constraints). Lint, type check and build pass.
+- **2026-10-05 (search):** Added a search bar. Conrad asked for Overpass to
+  return every business name and make them searchable. The names already
+  come from Overpass through the pipeline, so `export_site_data.py` now also
+  writes `public/data/search.json`: 17,155 names across the 9 metro
+  districts. The search runs in the browser: name matches first, then
+  street or city, current district preferred. Arrow keys and Enter work.
+  Picking a result switches district if needed, flies to the business, rings
+  its pin and opens its panel. Tested in Chrome: "beauty supply" lists 7
+  matches across 3 districts; picking "#1 Beauty Supply" from MD-08 switched
+  to DC and opened its panel. Also excluded the copied MapLibre worker from
+  lint (it produced 1,126 warnings that were not ours).
