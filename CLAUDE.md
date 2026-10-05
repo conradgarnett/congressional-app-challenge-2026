@@ -48,6 +48,15 @@ change makes a rule or fact above the Log wrong, fix that section too.
 - **No strong signal = different businesses.** Better to wrongly keep a
   three-location business than to wrongly drop a family shop.
 
+## Map categories
+
+Every small business sits in one of five groups, and the map has a tab for
+each: **Food & drink, Groceries & essentials, Personal care, Services,
+Shopping.** The map opens on **all groups**: Conrad decided against making
+food the default view. Groups are assigned in
+`pipeline/filter/groups/assign_groups.py`; any shop type not listed there
+falls into Shopping, and any trade (`craft=*`) into Services.
+
 ## Constraints that will break things if ignored
 
 **District lines are the Census 119th Congress boundaries.** Virginia voters
@@ -91,6 +100,8 @@ publicapis.io/open-street-map-api):
   - `fetch/districts.py`: district boundaries → `data/processed/districts.geojson`
   - `fetch/businesses.py`: OSM businesses per district → `data/processed/businesses.geojson`
   - `filter/chains/filter_chains.py`: layer 1 chain filter → `data/processed/businesses_layer1.geojson`
+  - `filter/groups/assign_groups.py`: drops chains, unnamed places and
+    non-businesses, assigns map groups → `data/processed/small_businesses.geojson`
   - `filter/national`, `filter/matching`: layers 2 and 3 (not built yet)
 - `data/raw/`: downloads and caches, git-ignored. `data/processed/`: pipeline
   output, committed.
@@ -133,6 +144,24 @@ python3 -m venv .venv
 Of the chains, 11,475 were caught by an OSM brand tag and only 131 by an NSI
 name match. Brand tags do almost all the work; NSI catches chains that
 mappers forgot to tag.
+
+**Small businesses by map group, 2026-10-05** (chains, unnamed places and
+non-businesses removed; layer 2 not run yet):
+
+| district | food | groceries | personal care | services | shopping | total |
+|---|---|---|---|---|---|---|
+| DC-AL | 1,917 | 512 | 350 | 245 | 529 | 3,553 |
+| MD-04 | 355 | 110 | 121 | 108 | 141 | 835 |
+| MD-05 | 360 | 146 | 128 | 131 | 184 | 949 |
+| MD-06 | 733 | 234 | 228 | 239 | 399 | 1,833 |
+| **MD-08** | **721** | **167** | **221** | **224** | **312** | **1,645** |
+| VA-07 | 679 | 180 | 345 | 362 | 594 | 2,160 |
+| VA-08 | 1,228 | 150 | 385 | 301 | 476 | 2,540 |
+| VA-10 | 848 | 149 | 256 | 221 | 414 | 1,888 |
+| VA-11 | 906 | 85 | 279 | 199 | 378 | 1,847 |
+
+All 9 metro districts: 30,738 businesses → 19,132 after chains → 17,435
+after unnamed → **17,250** after non-businesses.
 
 OSM coverage is partial: the real number of businesses is far higher. That is
 why "add a missing business" is a core feature, not an extra.
@@ -186,3 +215,12 @@ why "add a missing business" is a core feature, not an extra.
   NSI-only matches: 231 before the fixes, 131 after. Total chains 11,706
   before, 11,606 after. Committed `businesses.geojson` (19 MB) and
   `businesses_layer1.geojson` (20 MB).
+- **2026-10-05:** Decided to sort businesses into five groups with a map tab
+  for each (Food & drink, Groceries & essentials, Personal care, Services,
+  Shopping). The map shows all groups by default, not food first. Added
+  `pipeline/filter/groups/assign_groups.py`. It also removes 1,697 unnamed
+  places and 185 non-businesses (empty storefronts, unknown type, malls,
+  pickup points, vending machines). Result: 17,250 small businesses in the
+  metro districts, 1,645 in MD-08 (table in Measured facts). Open question:
+  Shopping includes about 325 tobacco, vape and cannabis shops (all legal);
+  decide whether the school demo shows them.
