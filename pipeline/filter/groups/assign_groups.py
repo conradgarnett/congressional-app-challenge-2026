@@ -10,6 +10,9 @@ Dropped here, before any group is assigned:
   - non-businesses: empty storefronts (shop=vacant), unknown type (shop=yes,
     craft=yes), malls and shopping centres (buildings that hold businesses,
     not businesses), parcel pickup points (shop=outpost), vending machines
+  - vape shops: shop=e-cigarette, plus any shop with "vape", "vapor" or
+    "e-cig" in its name (many are tagged shop=tobacco). Team decision for the
+    school demo; plain tobacco and cannabis shops stay.
 
 Groups come from the OSM category. The lists below cover the common
 categories; any other shop=* goes to shopping and any other craft=* (trades
@@ -33,6 +36,9 @@ NOT_BUSINESSES = {
     "shop=vacant", "shop=yes", "craft=yes", "shop=mall", "shop=shopping_centre",
     "shop=outpost", "shop=vending_machine",
 }
+
+VAPE_CATEGORY = "shop=e-cigarette"
+VAPE_NAME_PATTERN = r"vape|vapor|vaping|e-cig|ecig"
 
 GROUP_LABELS = {
     "food": "Food & drink",
@@ -115,6 +121,12 @@ def main() -> None:
 
     businesses = businesses.assign(category=businesses.category.map(first_value))
     businesses = businesses[~businesses.category.isin(NOT_BUSINESSES)]
+    after_non_businesses = len(businesses)
+
+    is_vape = (businesses.category == VAPE_CATEGORY) | businesses["name"].str.contains(
+        VAPE_NAME_PATTERN, case=False, regex=True
+    )
+    businesses = businesses[~is_vape].copy()
 
     businesses["group"] = businesses.category.map(group_for)
     businesses = businesses.drop(columns=["chain", "chain_reason", "brand", "brand:wikidata"], errors="ignore")
@@ -123,7 +135,8 @@ def main() -> None:
     print(f"All businesses: {total}")
     print(f"  minus chains: {after_chains}")
     print(f"  minus unnamed: {after_names}")
-    print(f"  minus non-businesses: {len(businesses)}")
+    print(f"  minus non-businesses: {after_non_businesses}")
+    print(f"  minus vape shops: {len(businesses)}")
     counts = businesses.pivot_table(index="district", columns="group", values="osm_id", aggfunc="count", fill_value=0)
     counts["total"] = counts.sum(axis=1)
     print(counts.to_string())
