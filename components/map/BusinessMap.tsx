@@ -51,6 +51,12 @@ const EMPTY_FEATURES = { type: "FeatureCollection" as const, features: [] };
 
 const ROUTE_COLOR = "#1a73e8";
 
+// Switching districts flies: zoom out, glide, zoom back in
+const DISTRICT_FLIGHT_MS = 2400;
+/** How far the flight zooms out; MapLibre's default is 1.42 */
+const DISTRICT_FLIGHT_CURVE = 1.6;
+const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
+
 /** What the map draws for directions; see hooks/useRouteSession.ts */
 export interface RoutingLayer {
   route: LngLat[] | null;
@@ -120,6 +126,7 @@ export default function BusinessMap({
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<MapLibreMap | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const firstDistrictView = useRef(true);
 
   // Keep the latest callbacks without re-creating the map
   const onSelectRef = useRef(onSelect);
@@ -269,7 +276,22 @@ export default function BusinessMap({
     if (!loaded || !map.current) return;
     map.current.setFilter("district-selected", ["==", ["get", "id"], districtId]);
     const bounds = districtBounds(districts, districtId);
-    if (bounds) map.current.fitBounds(bounds, { padding: 40, duration: 800 });
+    const camera = bounds && map.current.cameraForBounds(bounds, { padding: 40 });
+    if (!camera) return;
+    if (firstDistrictView.current) {
+      // Opening the page: go straight there
+      firstDistrictView.current = false;
+      map.current.jumpTo(camera);
+      return;
+    }
+    // Not marked essential, so MapLibre skips the animation for people who
+    // ask their system for reduced motion
+    map.current.flyTo({
+      ...camera,
+      duration: DISTRICT_FLIGHT_MS,
+      curve: DISTRICT_FLIGHT_CURVE,
+      easing: easeInOutCubic,
+    });
   }, [loaded, districts, districtId]);
 
   // Declared after the district effect so a search pick's flyTo wins over fitBounds
