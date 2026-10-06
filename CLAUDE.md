@@ -185,6 +185,9 @@ default export**: use named imports.
 
 ## Running
 
+Easiest: `./install.sh` (Node and Python dependencies), `./install.sh --data`
+(whole data pipeline), `./run.sh` (dev server). Added by vxkxng. By hand:
+
 ```
 npm install && npm run dev                      # site at localhost:3000
 python3 -m venv .venv
