@@ -48,7 +48,12 @@ export default function MapView() {
       .catch(() => setError("Could not load district boundaries."));
   }, []);
 
+  // Districts outside the metro area have no business file yet
+  const districtInfo = districts?.features.find((feature) => feature.properties.id === districtId)?.properties;
+  const noData = districtInfo !== undefined && !districtInfo.has_data;
+
   useEffect(() => {
+    if (noData) return;
     let cancelled = false;
     fetch(`/data/businesses/${districtId}.geojson`)
       .then((response) => (response.ok ? response.json() : Promise.reject(response.statusText)))
@@ -61,10 +66,10 @@ export default function MapView() {
     return () => {
       cancelled = true;
     };
-  }, [districtId]);
+  }, [districtId, noData]);
 
   // Ignore data from the previous district while the new one loads
-  const businesses = loadedBusinesses?.districtId === districtId ? loadedBusinesses.data : null;
+  const businesses = !noData && loadedBusinesses?.districtId === districtId ? loadedBusinesses.data : null;
 
   // Looked up by id so a search pick in another district opens once its data arrives
   const selectedFeature = useMemo(
@@ -117,6 +122,7 @@ export default function MapView() {
   );
 
   function changeDistrict(id: string) {
+    if (id === districtId) return;
     setDistrictId(id);
     setSelectedId(null);
     setTag(null); // the new district may not have this type
@@ -153,7 +159,11 @@ export default function MapView() {
         <label className={styles.picker}>
           <span>District</span>
           <select value={districtId} onChange={(event) => changeDistrict(event.target.value)}>
-            {choices.length === 0 && <option value={districtId}>{districtLabel(districtId)}</option>}
+            {!choices.some((district) => district.id === districtId) && (
+              <option value={districtId}>
+                {districtLabel(districtId)} ({districtId})
+              </option>
+            )}
             {choices.map((district) => (
               <option key={district.id} value={district.id}>
                 {districtLabel(district.id)} ({district.id})
@@ -185,10 +195,15 @@ export default function MapView() {
             selectedId={selectedId}
             focus={focus}
             onSelect={selectBusiness}
+            onDistrictPick={changeDistrict}
             routing={routing}
           />
         )}
-        {!businesses && !error && <p className={styles.status}>Loading businesses…</p>}
+        {noData && (
+          <p className={styles.status}>No business data for {districtLabel(districtId)} yet: metro districts first.</p>
+        )}
+        {!businesses && !noData && !error && <p className={styles.status}>Loading businesses…</p>}
+        <p className={styles.hint}>Double-click a district to switch to it</p>
         {error && <p className={styles.status}>{error}</p>}
         {navigation.destination ? (
           <DirectionsPanel session={navigation} />

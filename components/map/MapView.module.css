@@ -68,3 +68,24 @@
   font-size: 14px;
   box-shadow: 0 2px 10px rgb(0 0 0 / 0.15);
 }
+
+.hint {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  z-index: 1;
+  transform: translateX(-50%);
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.85);
+  color: #374151;
+  font-size: 12px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .hint {
+    display: none;
+  }
+}

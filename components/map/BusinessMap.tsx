@@ -88,6 +88,8 @@ interface Props {
   /** Fly here when it changes (a search pick); `key` lets the same spot re-trigger */
   focus: { lng: number; lat: number; key: number } | null;
   onSelect: (businessId: string | null) => void;
+  /** Double-clicking a district switches to it */
+  onDistrictPick: (districtId: string) => void;
   routing: RoutingLayer;
 }
 
@@ -112,6 +114,7 @@ export default function BusinessMap({
   selectedId,
   focus,
   onSelect,
+  onDistrictPick,
   routing,
 }: Props) {
   const container = useRef<HTMLDivElement>(null);
@@ -120,11 +123,13 @@ export default function BusinessMap({
 
   // Keep the latest callbacks without re-creating the map
   const onSelectRef = useRef(onSelect);
+  const onDistrictPickRef = useRef(onDistrictPick);
   const routingRef = useRef(routing);
   useEffect(() => {
     onSelectRef.current = onSelect;
+    onDistrictPickRef.current = onDistrictPick;
     routingRef.current = routing;
-  }, [onSelect, routing]);
+  }, [onSelect, onDistrictPick, routing]);
 
   useEffect(() => {
     if (!container.current) return;
@@ -132,6 +137,8 @@ export default function BusinessMap({
       container: container.current,
       center: [-77.1, 39.05],
       zoom: 10,
+      // Double-click picks a district instead; zoom stays on scroll and the +/- buttons
+      doubleClickZoom: false,
     });
     instance.setStyle(BASE_STYLE_URL, { transformStyle: hideBaseMapBusinesses });
     instance.addControl(new NavigationControl({ showCompass: false }), "top-right");
@@ -143,6 +150,13 @@ export default function BusinessMap({
       instance.addSource("route-start", { type: "geojson", data: EMPTY_FEATURES });
       instance.addSource("user", { type: "geojson", data: EMPTY_FEATURES });
 
+      // Invisible fill: lets a double-click anywhere inside a district find it
+      instance.addLayer({
+        id: "district-area",
+        type: "fill",
+        source: "districts",
+        paint: { "fill-color": "#000000", "fill-opacity": 0 },
+      });
       instance.addLayer({
         id: "district-outline",
         type: "line",
@@ -226,6 +240,11 @@ export default function BusinessMap({
         }
         const hits = instance.queryRenderedFeatures(event.point, { layers: ["businesses"] });
         onSelectRef.current(hits.length > 0 ? (hits[0].properties.id as string) : null);
+      });
+      instance.on("dblclick", (event) => {
+        if (routingRef.current.picking) return;
+        const hit = instance.queryRenderedFeatures(event.point, { layers: ["district-area"] })[0];
+        if (hit) onDistrictPickRef.current(hit.properties.id as string);
       });
       instance.on("mouseenter", "businesses", () => {
         if (!routingRef.current.picking) instance.getCanvas().style.cursor = "pointer";

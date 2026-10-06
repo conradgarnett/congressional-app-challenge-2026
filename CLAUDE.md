@@ -350,3 +350,14 @@ why "add a missing business" is a core feature, not an extra.
   their type (Restaurant, Cafe...). Changing tab or district clears the
   chip; a search pick clears it so the result isn't hidden. Tested in
   Chrome: choosing Italian in MD-08 leaves only its 26 pins.
+- **2026-10-05 (double-click districts):** Double-clicking anywhere inside a
+  district now switches to it: bold outline, zoom to fit, its businesses
+  and counts load (same as the dropdown). The map's built-in double-click
+  zoom is off so the two don't clash; scroll and the +/- buttons still
+  zoom. Double-click is ignored while choosing a directions start point.
+  The 11 districts outside the metro area have no business file yet, so
+  they get outlined with a "No business data yet" note instead of an
+  error, and the dropdown shows them while selected. A hint at the bottom
+  of the map says "Double-click a district to switch to it". Tested in
+  Chrome: double-click near Reston switched MD-08 to VA-11 (1,839
+  businesses); near Columbia switched to MD-03 with the note.
