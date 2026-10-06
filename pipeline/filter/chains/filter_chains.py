@@ -33,6 +33,7 @@ import re
 import urllib.request
 
 import geopandas as gpd
+from tqdm import tqdm
 
 ROOT = Path(__file__).resolve().parents[3]
 RAW = ROOT / "data" / "raw"
@@ -142,7 +143,9 @@ def main() -> None:
     brands = load_nsi_brands()
     businesses = gpd.read_file(IN)
 
-    businesses["chain_reason"] = [chain_reason(row, brands) for _, row in businesses.iterrows()]
+    businesses["chain_reason"] = [
+        chain_reason(row, brands) for _, row in tqdm(businesses.iterrows(), desc="Filtering chains", unit="biz")
+    ]
     businesses["chain"] = businesses.chain_reason.notna()
     businesses.to_file(OUT, driver="GeoJSON")
 

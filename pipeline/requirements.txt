@@ -2,3 +2,4 @@ geopandas
 pyogrio
 shapely
 requests
+tqdm

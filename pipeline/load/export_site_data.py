@@ -15,6 +15,7 @@ from pathlib import Path
 import json
 
 import geopandas as gpd
+from tqdm import tqdm
 
 ROOT = Path(__file__).resolve().parents[2]
 PROCESSED = ROOT / "data" / "processed"
@@ -81,7 +82,7 @@ def main() -> None:
         SITE_DATA / "districts.geojson", driver="GeoJSON", COORDINATE_PRECISION=COORDINATE_DECIMALS
     )
 
-    for district_id, group in businesses.groupby("district"):
+    for district_id, group in tqdm(businesses.groupby("district"), desc="Exporting districts", unit="dist"):
         features = [business_feature(row) for _, row in group.iterrows()]
         write_json(
             SITE_DATA / "businesses" / f"{district_id}.geojson",

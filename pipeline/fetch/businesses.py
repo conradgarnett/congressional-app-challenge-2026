@@ -19,6 +19,7 @@ import time
 
 import geopandas as gpd
 import requests
+from tqdm import tqdm
 
 ROOT = Path(__file__).resolve().parents[2]
 CACHE = ROOT / "data" / "raw" / "osm"
@@ -120,13 +121,12 @@ def main() -> None:
         districts = districts[districts.metro]
 
     records = {}
-    for district in districts.itertuples():
+    for district in tqdm(districts.itertuples(), desc="Fetching businesses", unit="dist"):
         elements = fetch_district(district.id, district.geometry.bounds, args.refresh)
         for element in elements:
             record = to_record(element)
             if record:
                 records[record["osm_id"]] = record  # bounding boxes overlap; dedupe
-        print(f"{district.id}: {len(elements)} elements in bounding box", flush=True)
 
     points = gpd.GeoDataFrame(
         list(records.values()),
