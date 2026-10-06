@@ -1,48 +1,63 @@
 import type { Business, BusinessCollection, GroupId } from "@/types/business";
 
 /*
- * Tags are the finer types inside a category tab: a business's OSM cuisines
- * ("pizza;italian") plus its OSM type ("amenity=restaurant" -> "restaurant").
- * A pizza place is tagged both "pizza" and "restaurant", so it shows under
- * either chip.
+ * Tags are the finer types inside a category tab. They are built by the
+ * pipeline (pipeline/load/tagging.py) from OSM cuisine and type, words in the
+ * name, and OSM details, and arrive on each business as ";pizza;restaurant;takeout;".
  */
 
-const normalizeTag = (value: string) => value.trim().toLowerCase().replace(/\s+/g, "_");
+/** Amenities rather than kinds of business; shown in their own section. Keep in sync with FEATURE_RULES in tagging.py. */
+export const FEATURE_TAGS = new Set([
+  "takeout",
+  "delivery",
+  "outdoor_seating",
+  "drive_through",
+  "wheelchair_accessible",
+  "wifi",
+  "vegan",
+  "vegetarian",
+  "halal",
+  "kosher",
+  "gluten_free",
+]);
 
-export function businessTags(business: Business): string[] {
-  const tags = new Set<string>();
-  for (const cuisine of business.cuisine?.split(";") ?? []) {
-    if (cuisine.trim()) tags.add(normalizeTag(cuisine));
-  }
-  const type = business.category.split("=")[1];
-  if (type) tags.add(normalizeTag(type));
-  return [...tags];
-}
+/** Labels that "first letter uppercase" gets wrong */
+const LABELS: Record<string, string> = {
+  coffee_shop: "Coffee",
+  bubble_tea: "Bubble tea",
+  wifi: "Wi-Fi",
+  drive_through: "Drive-through",
+  wheelchair_accessible: "Wheelchair accessible",
+  gluten_free: "Gluten-free",
+  lashes_brows: "Lashes & brows",
+  tyres: "Tires",
+  second_hand: "Thrift & resale",
+  alcohol: "Beer, wine & liquor",
+  doityourself: "Hardware & DIY",
+  greengrocer: "Produce",
+  latin_american: "Latin American",
+  car_repair: "Car repair",
+};
 
-/**
- * Adds a `tags` property like ";pizza;italian;restaurant;" to every business,
- * so the map can filter with a plain substring test.
- */
-export function withTags(collection: BusinessCollection): BusinessCollection {
-  return {
-    ...collection,
-    features: collection.features.map((feature) => ({
-      ...feature,
-      properties: { ...feature.properties, tags: `;${businessTags(feature.properties).join(";")};` },
-    })),
-  };
-}
-
-/** "latin_american" -> "Latin american" */
 export function tagLabel(tag: string): string {
+  if (LABELS[tag]) return LABELS[tag];
   const words = tag.replace(/_/g, " ");
   return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+export function businessTags(business: Business): string[] {
+  return (business.tags ?? "").split(";").filter(Boolean);
+}
+
+export function hasTag(business: Business, tag: string): boolean {
+  return (business.tags ?? "").includes(`;${tag};`);
 }
 
 export interface TagOption {
   id: string;
   label: string;
   count: number;
+  feature: boolean;
 }
 
 /** Tags used by at least `minCount` businesses in the group, most common first. */
@@ -55,9 +70,5 @@ export function tagOptions(collection: BusinessCollection | null, group: GroupId
   return [...counts]
     .filter(([, count]) => count >= minCount)
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .map(([id, count]) => ({ id, label: tagLabel(id), count }));
-}
-
-export function hasTag(business: Business, tag: string): boolean {
-  return businessTags(business).includes(tag);
+    .map(([id, count]) => ({ id, label: tagLabel(id), count, feature: FEATURE_TAGS.has(id) }));
 }

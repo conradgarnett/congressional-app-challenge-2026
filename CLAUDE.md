@@ -60,11 +60,24 @@ falls into Shopping, and any trade (`craft=*`) into Services.
 
 Inside a tab, a second row of **type chips** narrows further: OSM cuisines
 (Italian, Pizza, Chinese...) and OSM types (Cafe, Bakery, Hairdresser...),
-most common first, with counts. A business can carry several tags: a pizza
-restaurant is both "Pizza" and "Restaurant". Tags are built in the browser
-from data the site already has (`lib/tags.ts`); no pipeline step. Chosen
-instead of an AI model for generic searches ("pizza place"): no API key,
-instant, works offline, and can't invent businesses.
+most common first, with counts, then a **Features** section (Takeout,
+Outdoor seating, Wheelchair accessible, Wi-Fi, Vegan, Halal...). A business
+can carry several tags: a pizza restaurant is both "Pizza" and "Restaurant".
+Tags are built by `pipeline/load/tagging.py` from three OSM-only sources:
+cuisine and type, words in the name ("Taqueria" means Mexican; rules apply
+only inside their own map group), and OSM detail tags. Chosen instead of an
+AI model: no API key, instant, works offline, and can't invent businesses.
+
+**Search puts tags first.** "pizza", "pizza place" and "chinese food" name a
+tag (filler words like food/place/shop are dropped; a synonym list maps
+coffee→cafe, haircut→hairdresser, take out→takeout...). Businesses with that
+tag rank above name matches, and the first result is "Pizza: show all 43 on
+the map", which opens the tab and chip.
+
+**Not built yet, waiting on outside data** (team decision 2026-10-06):
+average price, reviews, customer traffic. OSM has no price tags at all in
+our data; reviews and per-store traffic need a service such as Google
+Places, Yelp, Foursquare or BestTime.
 
 ## Constraints that will break things if ignored
 
@@ -166,6 +179,7 @@ default export**: use named imports.
     non-businesses, assigns map groups → `data/processed/small_businesses.geojson`
   - `filter/national`, `filter/matching`: layers 2 and 3 (not built yet)
   - `load/export_site_data.py`: slim per-district files for the site → `public/data/`
+  - `load/tagging.py`: tag rules, used by the export
 - `data/raw/`: downloads and caches, git-ignored. `data/processed/`: pipeline
   output, committed.
 
@@ -370,3 +384,22 @@ why "add a missing business" is a core feature, not an extra.
   people whose system asks for reduced motion. Checked with frames
   captured mid-flight in Chrome: the camera pulls out to the wider DC
   area, then settles on the new district.
+- **2026-10-06 (better tags, tag-first search):** Conrad asked for five
+  features: average price, better tags (menus and more), tags ahead of
+  names in search, reviews, customer traffic. Decided to build only what
+  our data supports for now; price, reviews and traffic wait on an outside
+  service. Built: (1) `tagging.py` with name-word rules and OSM detail tags,
+  kept by `businesses.py` (re-run from the cache, no download). Food places
+  with a cuisine or dish tag went from 68% (5,278 of 7,747) to 74% (5,719);
+  name rules added 2,774 tags (nails 569, barber 313, sandwich 121, chicken
+  82, pizza 39...). Feature tags across the metro: outdoor seating 776,
+  wheelchair accessible 709, takeout 666, delivery 238, vegetarian 222,
+  Wi-Fi 211, vegan 97, halal 73. Fixed two bad rules found by spot check:
+  "cafe" no longer means coffee shop ("Cafe Vy" is Vietnamese), and the
+  brow rule no longer matches "Brown's". (2) Search ranks tag matches
+  first, with a "show all on the map" row. Tested in Chrome on MD-08:
+  "pizza" → 43 pizza places, "chinese food" → 51 Chinese places, "coffee" →
+  73 cafes, "barber" → 28, "take out" → 65; "show all" for pizza opened Food
+  & drink with the Pizza chip and 43 pins. (3) The info panel shows tags
+  (Restaurant · Chinese), feature chips (Takeout, Delivery) and a menu link
+  when OSM has one. Search index grew to 2.33 MB (tags per business).

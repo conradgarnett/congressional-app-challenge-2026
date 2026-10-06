@@ -45,7 +45,12 @@ KEEP_TAGS = [
     "contact:website", "contact:phone", "contact:instagram", "contact:facebook",
     "opening_hours", "cuisine",
     "addr:housenumber", "addr:street", "addr:city", "addr:postcode",
+    # Details that become feature tags (pipeline/load/tagging.py)
+    "takeaway", "delivery", "outdoor_seating", "drive_through", "wheelchair",
+    "internet_access", "website:menu",
 ]
+# Every diet:* tag is kept too (diet:vegan, diet:halal, ...)
+KEEP_TAG_PREFIXES = ("diet:",)
 
 
 def overpass_query(south: float, west: float, north: float, east: float) -> str:
@@ -107,6 +112,7 @@ def to_record(element: dict) -> dict | None:
         "lon": point["lon"],
     }
     record.update({key: tags[key] for key in KEEP_TAGS if key in tags})
+    record.update({key: value for key, value in tags.items() if key.startswith(KEEP_TAG_PREFIXES)})
     return record
 
 

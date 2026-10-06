@@ -48,3 +48,16 @@
   background: none;
   color: var(--link);
 }
+
+.divider {
+  width: 1px;
+  align-self: stretch;
+  margin: 0 4px;
+  background: var(--border);
+}
+
+.sectionLabel {
+  align-self: center;
+  color: var(--muted);
+  font-size: 12px;
+}

@@ -17,6 +17,8 @@ import json
 import geopandas as gpd
 from tqdm import tqdm
 
+from tagging import business_tags
+
 ROOT = Path(__file__).resolve().parents[2]
 PROCESSED = ROOT / "data" / "processed"
 SITE_DATA = ROOT / "public" / "data"
@@ -39,6 +41,7 @@ FIELDS = {
     "addr:street": "street",
     "addr:city": "city",
     "addr:postcode": "postcode",
+    "website:menu": "menu",
 }
 FALLBACKS = {"phone": "contact:phone", "website": "contact:website"}
 
@@ -51,6 +54,8 @@ def business_feature(row) -> dict:
             value = row.get(FALLBACKS.get(key, ""), None)
         if isinstance(value, str) and value:
             properties[key] = value
+    # ";pizza;italian;restaurant;takeout;" so the map can match whole tags with a substring test
+    properties["tags"] = f";{';'.join(business_tags(row))};"
     return {
         "type": "Feature",
         "geometry": {
@@ -91,7 +96,7 @@ def main() -> None:
 
     # Search index: one compact row per business across every district, so the
     # search bar can find a business without loading every district's file.
-    # Row: [id, name, district, group, category, street, city, lon, lat]
+    # Row: [id, name, district, group, category, street, city, lon, lat, tags]
     rows = [
         [
             row["osm_id"],
@@ -103,6 +108,7 @@ def main() -> None:
             row.get("addr:city") if isinstance(row.get("addr:city"), str) else "",
             round(row.geometry.x, COORDINATE_DECIMALS),
             round(row.geometry.y, COORDINATE_DECIMALS),
+            ";".join(business_tags(row)),
         ]
         for _, row in businesses.sort_values("name").iterrows()
     ]

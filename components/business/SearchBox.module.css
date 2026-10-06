@@ -81,3 +81,14 @@
   color: var(--muted);
   font-size: 14px;
 }
+
+.tagOption {
+  border-bottom: 1px solid var(--border);
+  border-radius: 6px 6px 0 0;
+  margin-bottom: 4px;
+}
+
+.tagOption .name {
+  color: var(--link);
+  font-weight: 600;
+}

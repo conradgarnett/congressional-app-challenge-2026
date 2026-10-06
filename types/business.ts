@@ -17,7 +17,9 @@ export interface Business {
   street?: string;
   city?: string;
   postcode?: string;
-  /** Added in the browser by lib/tags.ts: ";pizza;italian;restaurant;" */
+  /** Link to an online menu, when OSM has one */
+  menu?: string;
+  /** From pipeline/load/tagging.py: ";pizza;italian;restaurant;takeout;" */
   tags?: string;
 }
 

@@ -1,4 +1,5 @@
 import { GROUPS, categoryLabel } from "@/lib/groups";
+import { FEATURE_TAGS, businessTags, tagLabel } from "@/lib/tags";
 import type { Business } from "@/types/business";
 import styles from "./BusinessPanel.module.css";
 
@@ -22,6 +23,10 @@ export default function BusinessPanel({ business, onClose, onDirections }: Props
   const group = GROUPS.find((g) => g.id === business.group);
   const where = address(business);
   const osmUrl = `https://www.openstreetmap.org/${business.id}`;
+  const tags = businessTags(business);
+  const type = business.category.split("=")[1];
+  const kinds = tags.filter((tag) => !FEATURE_TAGS.has(tag) && tag !== type).map(tagLabel);
+  const features = tags.filter((tag) => FEATURE_TAGS.has(tag)).map(tagLabel);
 
   return (
     <aside className={styles.panel} aria-label={business.name}>
@@ -35,10 +40,14 @@ export default function BusinessPanel({ business, onClose, onDirections }: Props
         </p>
       )}
       <h2 className={styles.name}>{business.name}</h2>
-      <p className={styles.category}>
-        {categoryLabel(business.category)}
-        {business.cuisine && ` · ${business.cuisine.replace(/[_;]/g, " ")}`}
-      </p>
+      <p className={styles.category}>{[categoryLabel(business.category), ...kinds].join(" · ")}</p>
+      {features.length > 0 && (
+        <ul className={styles.features} aria-label="Features">
+          {features.map((feature) => (
+            <li key={feature}>{feature}</li>
+          ))}
+        </ul>
+      )}
 
       <button type="button" className={styles.directions} onClick={onDirections}>
         Directions
@@ -62,6 +71,16 @@ export default function BusinessPanel({ business, onClose, onDirections }: Props
             <dt>Phone</dt>
             <dd>
               <a href={`tel:${business.phone}`}>{business.phone}</a>
+            </dd>
+          </>
+        )}
+        {business.menu && (
+          <>
+            <dt>Menu</dt>
+            <dd>
+              <a href={websiteHref(business.menu)} target="_blank" rel="noopener noreferrer">
+                View menu
+              </a>
             </dd>
           </>
         )}

@@ -11,7 +11,7 @@ import DirectionsPanel from "@/components/routing/DirectionsPanel";
 import { useRouteSession } from "@/hooks/useRouteSession";
 import { GROUPS, type GroupFilter } from "@/lib/groups";
 import type { SearchEntry } from "@/lib/search";
-import { hasTag, tagOptions, withTags } from "@/lib/tags";
+import { hasTag, tagOptions } from "@/lib/tags";
 import type { BusinessCollection, DistrictCollection, GroupId } from "@/types/business";
 import styles from "./MapView.module.css";
 
@@ -58,7 +58,7 @@ export default function MapView() {
     fetch(`/data/businesses/${districtId}.geojson`)
       .then((response) => (response.ok ? response.json() : Promise.reject(response.statusText)))
       .then((data: BusinessCollection) => {
-        if (!cancelled) setLoadedBusinesses({ districtId, data: withTags(data) });
+        if (!cancelled) setLoadedBusinesses({ districtId, data });
       })
       .catch(() => {
         if (!cancelled) setError(`Could not load businesses for ${districtId}.`);
@@ -140,6 +140,12 @@ export default function MapView() {
     if (selected && next && !hasTag(selected, next)) setSelectedId(null);
   }
 
+  function showTag(tagId: string, tagGroup: GroupId) {
+    setGroup(tagGroup);
+    setTag(tagId);
+    if (selected && !hasTag(selected, tagId)) setSelectedId(null);
+  }
+
   function pickSearchResult(entry: SearchEntry) {
     if (entry.district !== districtId) changeDistrict(entry.district);
     if (group !== "all" && group !== entry.group) setGroup("all");
@@ -155,7 +161,7 @@ export default function MapView() {
           <h1 className={styles.title}>Local Map</h1>
           <p className={styles.subtitle}>Independent small businesses, by congressional district</p>
         </div>
-        <SearchBox currentDistrict={districtId} onPick={pickSearchResult} />
+        <SearchBox currentDistrict={districtId} onPick={pickSearchResult} onPickTag={showTag} />
         <label className={styles.picker}>
           <span>District</span>
           <select value={districtId} onChange={(event) => changeDistrict(event.target.value)}>
