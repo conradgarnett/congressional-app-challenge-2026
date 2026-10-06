@@ -361,3 +361,12 @@ why "add a missing business" is a core feature, not an extra.
   of the map says "Double-click a district to switch to it". Tested in
   Chrome: double-click near Reston switched MD-08 to VA-11 (1,839
   businesses); near Columbia switched to MD-03 with the note.
+- **2026-10-06 (smoother district switch):** Conrad found the jump after a
+  double-click awkward. Switching districts now flies instead of a 0.8 s
+  snap: it zooms out, glides, then zooms in over 2.4 s with ease-in-out
+  (`DISTRICT_FLIGHT_MS`, `DISTRICT_FLIGHT_CURVE` in `BusinessMap.tsx`). The
+  first view when the page opens jumps straight to MD-08 with no
+  animation. The flight is not marked essential, so MapLibre skips it for
+  people whose system asks for reduced motion. Checked with frames
+  captured mid-flight in Chrome: the camera pulls out to the wider DC
+  area, then settles on the new district.
