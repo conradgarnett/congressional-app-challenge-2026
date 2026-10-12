@@ -1,12 +1,15 @@
 import { GROUPS, categoryLabel } from "@/lib/groups";
 import { FEATURE_TAGS, businessTags, tagLabel } from "@/lib/tags";
 import type { Business } from "@/types/business";
+import HeartIcon from "./HeartIcon";
 import styles from "./BusinessPanel.module.css";
 
 interface Props {
   business: Business;
+  saved: boolean;
   onClose: () => void;
   onDirections: () => void;
+  onToggleSave: () => void;
 }
 
 function address(business: Business): string | null {
@@ -19,28 +22,35 @@ function websiteHref(website: string): string {
   return /^https?:\/\//i.test(website) ? website : `https://${website}`;
 }
 
-export default function BusinessPanel({ business, onClose, onDirections }: Props) {
+/** "Chinese restaurant", "Pizza and Italian restaurant", "Hairdresser" */
+function describe(business: Business): string {
+  const type = business.category.split("=")[1];
+  const kinds = businessTags(business)
+    .filter((tag) => !FEATURE_TAGS.has(tag) && tag !== type)
+    .slice(0, 2)
+    .map(tagLabel);
+  const typeLabel = categoryLabel(business.category);
+  if (kinds.length === 0) return typeLabel;
+  return `${kinds.join(" and ")} ${typeLabel.toLowerCase()}`;
+}
+
+export default function BusinessPanel({ business, saved, onClose, onDirections, onToggleSave }: Props) {
   const group = GROUPS.find((g) => g.id === business.group);
   const where = address(business);
   const osmUrl = `https://www.openstreetmap.org/${business.id}`;
-  const tags = businessTags(business);
-  const type = business.category.split("=")[1];
-  const kinds = tags.filter((tag) => !FEATURE_TAGS.has(tag) && tag !== type).map(tagLabel);
-  const features = tags.filter((tag) => FEATURE_TAGS.has(tag)).map(tagLabel);
+  const features = businessTags(business).filter((tag) => FEATURE_TAGS.has(tag)).map(tagLabel);
 
   return (
-    <aside className={styles.panel} aria-label={business.name}>
+    <aside
+      className={styles.panel}
+      aria-label={business.name}
+      style={{ "--accent": group?.color } as React.CSSProperties}
+    >
       <button type="button" className={styles.close} onClick={onClose} aria-label="Close">
         ×
       </button>
-      {group && (
-        <p className={styles.group}>
-          <span className={styles.dot} style={{ background: group.color }} aria-hidden />
-          {group.label}
-        </p>
-      )}
       <h2 className={styles.name}>{business.name}</h2>
-      <p className={styles.category}>{[categoryLabel(business.category), ...kinds].join(" · ")}</p>
+      <p className={styles.category}>{describe(business)}</p>
       {features.length > 0 && (
         <ul className={styles.features} aria-label="Features">
           {features.map((feature) => (
@@ -49,9 +59,15 @@ export default function BusinessPanel({ business, onClose, onDirections }: Props
         </ul>
       )}
 
-      <button type="button" className={styles.directions} onClick={onDirections}>
-        Directions
-      </button>
+      <div className={styles.actions}>
+        <button type="button" className={styles.directions} onClick={onDirections}>
+          Directions
+        </button>
+        <button type="button" className={styles.save} aria-pressed={saved} onClick={onToggleSave}>
+          <HeartIcon filled={saved} />
+          {saved ? "Saved" : "Save"}
+        </button>
+      </div>
 
       <dl className={styles.details}>
         {where && (
@@ -79,7 +95,7 @@ export default function BusinessPanel({ business, onClose, onDirections }: Props
             <dt>Menu</dt>
             <dd>
               <a href={websiteHref(business.menu)} target="_blank" rel="noopener noreferrer">
-                View menu
+                See the menu
               </a>
             </dd>
           </>
@@ -97,11 +113,10 @@ export default function BusinessPanel({ business, onClose, onDirections }: Props
       </dl>
 
       <p className={styles.source}>
-        Source:{" "}
+        Listed on OpenStreetMap. Something out of date?{" "}
         <a href={osmUrl} target="_blank" rel="noopener noreferrer">
-          OpenStreetMap
+          Anyone can fix it there.
         </a>
-        . Something wrong or missing? Anyone can fix it there.
       </p>
     </aside>
   );

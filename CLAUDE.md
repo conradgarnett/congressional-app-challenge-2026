@@ -79,6 +79,35 @@ average price, reviews, customer traffic. OSM has no price tags at all in
 our data; reviews and per-store traffic need a service such as Google
 Places, Yelp, Foursquare or BestTime.
 
+## Look and feel
+
+Theme: a neighborhood main street. Set up with Anthropic's `frontend-design`
+skill (installed 2026-10-12); keep new UI consistent with it:
+
+- **Colors** (`app/globals.css`): ink `#1d2b26` text, sign green `#1f5f4a`
+  for actions and the brand, marigold `#f0b33c` **only** for saved spots,
+  paper `#fbfbf8` panels, fog `#e4e8e3` borders, stone `#5b6862` muted text,
+  route green `#0e7c5a`. Pin colors live in `lib/groups.ts`.
+- **Type:** Bricolage Grotesque for names and the district title (signage
+  feel); Atkinson Hyperlegible Next for everything else (made by the Braille
+  Institute for low-vision readers).
+- **The one loud element** is the header's place name ("Maryland's 8th
+  District"). Keep everything else quiet.
+- **Words:** plain, sentence case, from the visitor's side ("Switch
+  district", "Your saved spots"). No ALL-CAPS labels, no "A · B · C"
+  strings; use commas. Errors say what happened and what to do.
+- **Panels:** floating sheets with a 6px stripe in the business's group
+  color. Business names appear beside pins from zoom 15 in.
+
+## Saved spots
+
+The heart **Save** button in a business panel keeps it in the **Saved** tab
+(`hooks/useSaved.ts`). Saved spots are stored in the browser's
+localStorage: no account, no server, so they stay on that device only.
+Each keeps its name, type, district and position, so the list works across
+districts. Saved pins get a marigold ring on the map; the Saved tab shows
+only them.
+
 ## Constraints that will break things if ignored
 
 **District lines are the Census 119th Congress boundaries.** Virginia voters
@@ -406,3 +435,21 @@ why "add a missing business" is a core feature, not an extra.
   & drink with the Pizza chip and 43 pins. (3) The info panel shows tags
   (Restaurant · Chinese), feature chips (Takeout, Delivery) and a menu link
   when OSM has one. Search index grew to 2.33 MB (tags per business).
+- **2026-10-12 (warmer design, saved spots):** Conrad asked for a more
+  human UI using skills found online, plus favorites with their own tab.
+  Installed `anthropics/skills@frontend-design` (977K installs, design
+  guidance only) and followed its process: a written design plan (Look and
+  feel above), checked against its list of template tells, then
+  screenshots to critique. Changes: new palette and fonts; the header leads
+  with the district name in large type plus a count; "Everything" replaces
+  "All"; business panels say "Chinese restaurant" instead of
+  "Restaurant · Chinese"; no more middle-dot strings or ALL-CAPS eyebrows;
+  friendlier empty, loading and error text; "You're here. Enjoy …!" on
+  arrival; business names beside pins when zoomed in. Added Save / Saved and
+  the Saved tab. Fixes from self-review: the panel's colored top edge
+  curved around the corners (now a straight stripe), "General" read oddly
+  (now "General store", plus a few other type names), and the phone header
+  took about a quarter of the screen (now title and picker share a row).
+  Tested in Chrome: saved 2 spots, both listed in the Saved tab with
+  marigold rings, still there after a reload; no sideways scrolling at
+  390 px wide.

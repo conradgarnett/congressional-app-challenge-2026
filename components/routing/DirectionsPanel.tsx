@@ -40,18 +40,20 @@ export default function DirectionsPanel({ session }: Props) {
       <button type="button" className={styles.close} onClick={session.close} aria-label="Close directions">
         ×
       </button>
-      <p className={styles.eyebrow}>Directions to</p>
-      <h2 className={styles.title}>{destination.name}</h2>
+      <h2 className={styles.title}>
+        <span className={styles.titleLead}>Getting to </span>
+        {destination.name}
+      </h2>
 
       {live && progress && (
         <div className={styles.banner} role="status" aria-live="polite">
           {progress.arrived ? (
-            <p className={styles.bannerMain}>You have arrived.</p>
+            <p className={styles.bannerMain}>You&apos;re here. Enjoy {destination.name}!</p>
           ) : (
             <>
               <p className={styles.bannerMain}>{nextManeuver?.instruction}</p>
               <p className={styles.bannerSub}>
-                In {formatDistance(progress.toNextMeters)} · {formatDistance(progress.remainingMeters)} left
+                In {formatDistance(progress.toNextMeters)}. {formatDistance(progress.remainingMeters)} to go.
               </p>
             </>
           )}
@@ -103,7 +105,7 @@ export default function DirectionsPanel({ session }: Props) {
         <>
           {!live && (
             <p className={styles.summary}>
-              <strong>{formatDuration(route.durationSeconds)}</strong> · {formatDistance(route.distanceMeters)}
+              <strong>{formatDuration(route.durationSeconds)}</strong> ({formatDistance(route.distanceMeters)})
             </p>
           )}
 

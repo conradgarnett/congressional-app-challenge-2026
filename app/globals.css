@@ -1,24 +1,41 @@
+/*
+ * Look: neighborhood main street. Painted sign green for actions, marigold
+ * only for saved spots, quiet paper and fog around the map.
+ * Older names (--foreground, --muted...) stay as aliases used across components.
+ */
 :root {
+  --ink: #1d2b26;
+  --sign: #1f5f4a;
+  --sign-hover: #174a39;
+  --marigold: #f0b33c;
+  --paper: #fbfbf8;
+  --fog: #e4e8e3;
+  --stone: #5b6862;
+  --route: #0e7c5a;
+  --error: #b3261e;
+
   --background: #ffffff;
-  --surface: #ffffff;
-  --foreground: #171717;
-  --muted: #5f6672;
-  --border: #e3e5e8;
-  --link: #1f6fb4;
-  --route: #1a73e8;
-  --error: #c0362c;
+  --surface: var(--paper);
+  --foreground: var(--ink);
+  --muted: var(--stone);
+  --border: var(--fog);
+  --link: var(--sign);
+
+  --font-display: var(--font-bricolage), "Avenir Next", system-ui, sans-serif;
+  --font-body: var(--font-atkinson), system-ui, sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0f1115;
-    --surface: #181b21;
-    --foreground: #ededed;
-    --muted: #a0a7b2;
-    --border: #2c313a;
-    --link: #7ab6ee;
-    --route: #1a73e8;
+    --ink: #e8efea;
+    --sign: #7cc8a6;
+    --sign-hover: #9bd8bc;
+    --paper: #18201d;
+    --fog: #2c3833;
+    --stone: #a3b1aa;
+    --route: #34b384;
     --error: #ff8a80;
+    --background: #111815;
   }
 }
 
@@ -36,15 +53,22 @@ body {
 }
 
 body {
-  color: var(--foreground);
+  color: var(--ink);
   background: var(--background);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.4;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 a {
   color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--sign);
+  outline-offset: 2px;
 }
 
 @media (prefers-color-scheme: dark) {

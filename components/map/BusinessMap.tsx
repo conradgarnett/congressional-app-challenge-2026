@@ -49,7 +49,11 @@ function hideBaseMapBusinesses(_previous: StyleSpecification | undefined, next: 
 const EMPTY: BusinessCollection = { type: "FeatureCollection", features: [] };
 const EMPTY_FEATURES = { type: "FeatureCollection" as const, features: [] };
 
-const ROUTE_COLOR = "#1a73e8";
+const ROUTE_COLOR = "#0e7c5a";
+const INK = "#1d2b26";
+const MARIGOLD = "#f0b33c";
+/** Business names appear beside pins from this zoom in, like storefront signs */
+const LABEL_MIN_ZOOM = 15;
 
 // Switching districts flies: zoom out, glide, zoom back in
 const DISTRICT_FLIGHT_MS = 2400;
@@ -90,6 +94,8 @@ interface Props {
   group: GroupFilter;
   /** A type inside the group, e.g. "pizza"; see lib/tags.ts */
   tag: string | null;
+  /** The visitor's saved spots: ringed in marigold, and the only pins on the Saved tab */
+  savedIds: string[];
   selectedId: string | null;
   /** Fly here when it changes (a search pick); `key` lets the same spot re-trigger */
   focus: { lng: number; lat: number; key: number } | null;
@@ -117,6 +123,7 @@ export default function BusinessMap({
   businesses,
   group,
   tag,
+  savedIds,
   selectedId,
   focus,
   onSelect,
@@ -175,7 +182,7 @@ export default function BusinessMap({
         type: "line",
         source: "districts",
         filter: ["==", ["get", "id"], ""],
-        paint: { "line-color": "#111827", "line-width": 3 },
+        paint: { "line-color": INK, "line-width": 3 },
       });
       // Route under the pins so it never hides a business
       instance.addLayer({
@@ -205,6 +212,34 @@ export default function BusinessMap({
       });
 
       instance.addLayer({
+        id: "business-saved",
+        type: "circle",
+        source: "businesses",
+        filter: ["in", ["get", "id"], ["literal", []]],
+        paint: {
+          "circle-color": "rgba(0,0,0,0)",
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 9, 6, 12, 8, 15, 10, 17, 12],
+          "circle-stroke-color": MARIGOLD,
+          "circle-stroke-width": 2.5,
+        },
+      });
+      instance.addLayer({
+        id: "business-labels",
+        type: "symbol",
+        source: "businesses",
+        minzoom: LABEL_MIN_ZOOM,
+        layout: {
+          "text-field": ["get", "name"],
+          "text-font": ["Noto Sans Regular"], // a font the base map's glyph server has
+          "text-size": 12,
+          "text-anchor": "left",
+          "text-offset": [0.9, 0],
+          "text-max-width": 9,
+          "text-optional": true,
+        },
+        paint: { "text-color": INK, "text-halo-color": "#ffffff", "text-halo-width": 1.5 },
+      });
+      instance.addLayer({
         id: "business-selected",
         type: "circle",
         source: "businesses",
@@ -212,7 +247,7 @@ export default function BusinessMap({
         paint: {
           "circle-color": GROUP_COLOR,
           "circle-radius": 11,
-          "circle-stroke-color": "#111827",
+          "circle-stroke-color": INK,
           "circle-stroke-width": 3,
         },
       });
@@ -224,7 +259,7 @@ export default function BusinessMap({
         paint: {
           "circle-color": "#ffffff",
           "circle-radius": 7,
-          "circle-stroke-color": "#111827",
+          "circle-stroke-color": INK,
           "circle-stroke-width": 3,
         },
       });
@@ -313,11 +348,19 @@ export default function BusinessMap({
   useEffect(() => {
     if (!loaded || !map.current) return;
     const conditions: ExpressionSpecification[] = [];
-    if (group !== "all") conditions.push(["==", ["get", "group"], group]);
+    if (group === "saved") conditions.push(["in", ["get", "id"], ["literal", savedIds]]);
+    else if (group !== "all") conditions.push(["==", ["get", "group"], group]);
     // tags look like ";pizza;italian;restaurant;", so ";pizza;" matches whole tags only
     if (tag) conditions.push(["in", `;${tag};`, ["get", "tags"]]);
-    map.current.setFilter("businesses", conditions.length === 0 ? null : ["all", ...conditions]);
-  }, [loaded, group, tag]);
+    const filter = conditions.length === 0 ? null : (["all", ...conditions] as ExpressionSpecification);
+    map.current.setFilter("businesses", filter);
+    map.current.setFilter("business-labels", filter);
+  }, [loaded, group, tag, savedIds]);
+
+  useEffect(() => {
+    if (!loaded || !map.current) return;
+    map.current.setFilter("business-saved", ["in", ["get", "id"], ["literal", savedIds]]);
+  }, [loaded, savedIds]);
 
   useEffect(() => {
     if (!loaded || !map.current) return;

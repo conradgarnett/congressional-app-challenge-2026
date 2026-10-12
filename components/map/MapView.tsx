@@ -5,10 +5,12 @@ import dynamic from "next/dynamic";
 
 import BusinessPanel from "@/components/business/BusinessPanel";
 import CategoryTabs from "@/components/business/CategoryTabs";
+import SavedPanel from "@/components/business/SavedPanel";
 import SearchBox from "@/components/business/SearchBox";
 import TagFilter from "@/components/business/TagFilter";
 import DirectionsPanel from "@/components/routing/DirectionsPanel";
 import { useRouteSession } from "@/hooks/useRouteSession";
+import { useSaved, type SavedSpot } from "@/hooks/useSaved";
 import { GROUPS, type GroupFilter } from "@/lib/groups";
 import type { SearchEntry } from "@/lib/search";
 import { hasTag, tagOptions } from "@/lib/tags";
@@ -20,12 +22,19 @@ const BusinessMap = dynamic(() => import("./BusinessMap"), { ssr: false });
 
 const DEMO_DISTRICT = "MD-08";
 
-const STATE_NAMES: Record<string, string> = { DC: "District of Columbia", MD: "Maryland", VA: "Virginia" };
+const STATE_NAMES: Record<string, string> = { MD: "Maryland", VA: "Virginia" };
 
-function districtLabel(id: string): string {
+function ordinal(n: number): string {
+  const tens = n % 100;
+  if (tens >= 11 && tens <= 13) return `${n}th`;
+  return `${n}${["th", "st", "nd", "rd"][n % 10] ?? "th"}`;
+}
+
+/** "MD-08" -> "Maryland's 8th District", "DC-AL" -> "Washington, DC" */
+function districtTitle(id: string): string {
   const [state, number] = id.split("-");
-  if (number === "AL") return STATE_NAMES[state] ?? id;
-  return `${STATE_NAMES[state] ?? state} ${Number(number)}`;
+  if (state === "DC") return "Washington, DC";
+  return `${STATE_NAMES[state] ?? state}'s ${ordinal(Number(number))} District`;
 }
 
 export default function MapView() {
@@ -40,12 +49,14 @@ export default function MapView() {
   const [focus, setFocus] = useState<{ lng: number; lat: number; key: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const navigation = useRouteSession();
+  const { saved, isSaved, toggle: toggleSaved, remove: removeSaved } = useSaved();
+  const savedIds = useMemo(() => saved.map((spot) => spot.id), [saved]);
 
   useEffect(() => {
     fetch("/data/districts.geojson")
       .then((response) => (response.ok ? response.json() : Promise.reject(response.statusText)))
       .then(setDistricts)
-      .catch(() => setError("Could not load district boundaries."));
+      .catch(() => setError("The district map didn't load. Check your connection and refresh the page."));
   }, []);
 
   // Districts outside the metro area have no business file yet
@@ -61,7 +72,7 @@ export default function MapView() {
         if (!cancelled) setLoadedBusinesses({ districtId, data });
       })
       .catch(() => {
-        if (!cancelled) setError(`Could not load businesses for ${districtId}.`);
+        if (!cancelled) setError("Businesses for this district didn't load. Check your connection and refresh.");
       });
     return () => {
       cancelled = true;
@@ -104,7 +115,10 @@ export default function MapView() {
     if (!navigation.destination) setSelectedId(id);
   }
 
-  const tags = useMemo(() => (group === "all" ? [] : tagOptions(businesses, group)), [businesses, group]);
+  const tags = useMemo(
+    () => (group === "all" || group === "saved" ? [] : tagOptions(businesses, group)),
+    [businesses, group],
+  );
 
   const counts = useMemo(() => {
     const result = Object.fromEntries(GROUPS.map((g) => [g.id, 0])) as Record<GroupId, number>;
@@ -132,7 +146,30 @@ export default function MapView() {
   function changeGroup(next: GroupFilter) {
     setGroup(next);
     setTag(null);
-    if (selected && next !== "all" && selected.group !== next) setSelectedId(null);
+    if (!selected || next === "all") return;
+    const stillShown = next === "saved" ? isSaved(selected.id) : selected.group === next;
+    if (!stillShown) setSelectedId(null);
+  }
+
+  function toggleSelectedSaved() {
+    if (!selectedFeature) return;
+    const { properties, geometry } = selectedFeature;
+    toggleSaved({
+      id: properties.id,
+      name: properties.name,
+      group: properties.group,
+      category: properties.category,
+      district: districtId,
+      city: properties.city,
+      lng: geometry.coordinates[0],
+      lat: geometry.coordinates[1],
+    });
+  }
+
+  function openSaved(spot: SavedSpot) {
+    if (spot.district !== districtId) changeDistrict(spot.district);
+    setSelectedId(spot.id);
+    setFocus({ lng: spot.lng, lat: spot.lat, key: Date.now() });
   }
 
   function changeTag(next: string | null) {
@@ -148,7 +185,7 @@ export default function MapView() {
 
   function pickSearchResult(entry: SearchEntry) {
     if (entry.district !== districtId) changeDistrict(entry.district);
-    if (group !== "all" && group !== entry.group) setGroup("all");
+    if (group !== "all" && (group === "saved" ? !isSaved(entry.id) : group !== entry.group)) setGroup("all");
     setTag(null); // a search pick must not be hidden by a type filter
     setSelectedId(entry.id);
     setFocus({ lng: entry.lng, lat: entry.lat, key: Date.now() });
@@ -157,30 +194,35 @@ export default function MapView() {
   return (
     <div className={styles.view}>
       <header className={styles.header}>
-        <div>
-          <h1 className={styles.title}>Local Map</h1>
-          <p className={styles.subtitle}>Independent small businesses, by congressional district</p>
+        <div className={styles.place}>
+          <p className={styles.brand}>Local Map</p>
+          <h1 className={styles.placeName}>{districtTitle(districtId)}</h1>
+          <p className={styles.placeLine}>
+            {noData
+              ? "Not mapped yet"
+              : businesses
+                ? `${businesses.features.length.toLocaleString()} independent businesses on the map`
+                : "Finding local businesses…"}
+          </p>
         </div>
         <SearchBox currentDistrict={districtId} onPick={pickSearchResult} onPickTag={showTag} />
         <label className={styles.picker}>
-          <span>District</span>
+          <span>Switch district</span>
           <select value={districtId} onChange={(event) => changeDistrict(event.target.value)}>
             {!choices.some((district) => district.id === districtId) && (
-              <option value={districtId}>
-                {districtLabel(districtId)} ({districtId})
-              </option>
+              <option value={districtId}>{districtTitle(districtId)}</option>
             )}
             {choices.map((district) => (
               <option key={district.id} value={district.id}>
-                {districtLabel(district.id)} ({district.id})
+                {districtTitle(district.id)}
               </option>
             ))}
           </select>
         </label>
       </header>
 
-      <CategoryTabs selected={group} counts={counts} onChange={changeGroup} />
-      {group !== "all" && (
+      <CategoryTabs selected={group} counts={counts} savedCount={saved.length} onChange={changeGroup} />
+      {group !== "all" && group !== "saved" && (
         <TagFilter
           key={group}
           groupLabel={GROUPS.find((g) => g.id === group)?.label ?? ""}
@@ -198,6 +240,7 @@ export default function MapView() {
             businesses={businesses}
             group={group}
             tag={tag}
+            savedIds={savedIds}
             selectedId={selectedId}
             focus={focus}
             onSelect={selectBusiness}
@@ -206,16 +249,26 @@ export default function MapView() {
           />
         )}
         {noData && (
-          <p className={styles.status}>No business data for {districtLabel(districtId)} yet: metro districts first.</p>
+          <p className={styles.status}>
+            We haven&apos;t mapped businesses here yet. Try a district closer to DC.
+          </p>
         )}
-        {!businesses && !noData && !error && <p className={styles.status}>Loading businesses…</p>}
+        {!businesses && !noData && !error && <p className={styles.status}>Finding local businesses…</p>}
         <p className={styles.hint}>Double-click a district to switch to it</p>
         {error && <p className={styles.status}>{error}</p>}
         {navigation.destination ? (
           <DirectionsPanel session={navigation} />
+        ) : selected ? (
+          <BusinessPanel
+            business={selected}
+            saved={isSaved(selected.id)}
+            onClose={() => setSelectedId(null)}
+            onDirections={openDirections}
+            onToggleSave={toggleSelectedSaved}
+          />
         ) : (
-          selected && (
-            <BusinessPanel business={selected} onClose={() => setSelectedId(null)} onDirections={openDirections} />
+          group === "saved" && (
+            <SavedPanel saved={saved} currentDistrict={districtId} onOpen={openSaved} onRemove={removeSaved} />
           )
         )}
       </div>
