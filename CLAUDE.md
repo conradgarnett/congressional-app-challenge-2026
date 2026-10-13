@@ -55,6 +55,19 @@ change makes a rule or fact above the Log wrong, fix that section too.
 - **No strong signal = different businesses.** Better to wrongly keep a
   three-location business than to wrongly drop a family shop.
 
+## How the map shows businesses
+
+Like Google Maps, not by district. The map loads the business file of every
+district on screen as you pan (`MapView.tsx`), and pins are MapLibre
+symbols that hide when they would overlap (`BusinessMap.tsx`). Zoomed out
+(zoom 9+) only a few well-spread pins show; zooming in reveals more; from
+zoom 15 names appear beside them. When pins compete for space, the business
+with more information wins (`rank`: cuisine tags, website, hours, phone,
+menu). Below zoom 9 no business pins show, only saved spots. Saved spots
+are always visible. The header names the district at the map's center and
+counts the businesses in view; the tab counts and type chips are for what's
+in view too. The district dropdown and double-click fly to a district.
+
 ## Map categories
 
 Every small business sits in one of five groups, and the map has a tab for
@@ -191,8 +204,11 @@ default export**: use named imports.
 
 - `app/`, `components/`, `features/`, `lib/`, `hooks/`, `types/`: Next.js
   site (App Router, TypeScript). Folder plan from `prompt.md`.
-  - `app/page.tsx` renders `components/map/MapView.tsx`: district picker,
-    category tabs, map, info panel. Opens on MD-08, all groups.
+  - `app/page.tsx` renders `components/map/MapView.tsx`: header, search,
+    category tabs, map, panels; loads district files for the view. Opens
+    on MD-08, all groups.
+  - `lib/geo/districts.ts`: district boxes, which districts are on screen,
+    which district a point is in.
   - `components/map/BusinessMap.tsx`: the MapLibre map (browser only,
     loaded with `ssr: false`).
   - `components/business/CategoryTabs.tsx`, `BusinessPanel.tsx`: tabs with
@@ -486,3 +502,16 @@ why "add a missing business" is a core feature, not an extra.
   district: their own map layer from the saved list. Tested in Chrome:
   saved a spot in MD-08 and one in DC, switched to VA-08, opened Saved; the
   map zoomed out to show both with marigold rings.
+- **2026-10-13 (Google Maps-style pins):** Conrad found the always-on pins
+  cluttered and asked for pins that load as you zoom into areas, like
+  Google Maps, with saved spots always visible. Rewrote the map: business
+  files load for every district on screen; pins are symbols that hide when
+  they'd overlap, with spacing that shrinks as you zoom in; best-described
+  businesses keep their spot; names from zoom 15. The header now names the
+  district at the map's center with "N independent businesses in view", and
+  counts and chips follow the view. The district dropdown ("Go to
+  district") and double-click fly there instead of switching data. Tested
+  in Chrome: opening view about 80 pins show of 5,878 in view; two zoom
+  steps in, more appear; on Bethesda's Woodmont Avenue every pin has a
+  name and none overlap; clicking a pin (Fialova) opens it; a search pick
+  in another area loads that district and opens the business.

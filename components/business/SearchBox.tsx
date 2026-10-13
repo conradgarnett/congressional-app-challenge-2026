@@ -133,7 +133,7 @@ export default function SearchBox({ currentDistrict, onPick, onPickTag }: Props)
                     <span className={styles.name}>
                       {option.match.label}: show all {option.match.count} on the map
                     </span>
-                    <span className={styles.meta}>Everywhere in this district</span>
+                    <span className={styles.meta}>Wherever you look on the map</span>
                   </span>
                 ) : (
                   <span className={styles.text}>

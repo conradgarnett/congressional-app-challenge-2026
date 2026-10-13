@@ -21,6 +21,10 @@ export interface Business {
   menu?: string;
   /** From pipeline/load/tagging.py: ";pizza;italian;restaurant;takeout;" */
   tags?: string;
+  /** Added in the browser (MapView): which district file it came from */
+  district?: string;
+  /** Added in the browser (MapView): how much the map knows; wins pin space */
+  rank?: number;
 }
 
 export interface District {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 
 import BusinessPanel from "@/components/business/BusinessPanel";
@@ -11,16 +11,20 @@ import TagFilter from "@/components/business/TagFilter";
 import DirectionsPanel from "@/components/routing/DirectionsPanel";
 import { useRouteSession } from "@/hooks/useRouteSession";
 import { useSaved, type SavedSpot } from "@/hooks/useSaved";
+import { boxesOverlap, districtAt, districtBoxes, inBounds } from "@/lib/geo/districts";
 import { GROUPS, type GroupFilter } from "@/lib/groups";
 import type { SearchEntry } from "@/lib/search";
-import { hasTag, tagOptions } from "@/lib/tags";
-import type { BusinessCollection, DistrictCollection, GroupId } from "@/types/business";
+import { FEATURE_TAGS, businessTags, hasTag, tagOptions } from "@/lib/tags";
+import type { Business, BusinessCollection, DistrictCollection, GroupId } from "@/types/business";
+import type { MapView as View } from "./BusinessMap";
 import styles from "./MapView.module.css";
 
 // MapLibre needs the browser (window, WebGL), so skip server rendering
 const BusinessMap = dynamic(() => import("./BusinessMap"), { ssr: false });
 
 const DEMO_DISTRICT = "MD-08";
+/** Keep in sync with PIN_MIN_ZOOM in BusinessMap.tsx (importing it would load MapLibre on the server) */
+const PIN_MIN_ZOOM = 9;
 
 const STATE_NAMES: Record<string, string> = { MD: "Maryland", VA: "Virginia" };
 
@@ -37,12 +41,25 @@ function districtTitle(id: string): string {
   return `${STATE_NAMES[state] ?? state}'s ${ordinal(Number(number))} District`;
 }
 
+/**
+ * How much the map knows about a business. When pins would overlap, the
+ * higher rank keeps its spot, so zoomed out you see the best-described places.
+ */
+function rank(business: Business): number {
+  const type = business.category.split("=")[1];
+  const kinds = businessTags(business).filter((tag) => tag !== type && !FEATURE_TAGS.has(tag)).length;
+  return kinds + (business.website ? 2 : 0) + (business.hours ? 1 : 0) + (business.phone ? 1 : 0) + (business.menu ? 1 : 0);
+}
+
 export default function MapView() {
   const [districts, setDistricts] = useState<DistrictCollection | null>(null);
-  const [districtId, setDistrictId] = useState(DEMO_DISTRICT);
-  const [loadedBusinesses, setLoadedBusinesses] = useState<{ districtId: string; data: BusinessCollection } | null>(
-    null,
-  );
+  // Business files load per district, for whichever districts are on screen
+  const [byDistrict, setByDistrict] = useState<Record<string, BusinessCollection>>({});
+  const requested = useRef(new Set<string>());
+  const [view, setView] = useState<View | null>(null);
+  const [flyToDistrict, setFlyToDistrict] = useState({ id: DEMO_DISTRICT, key: 0 });
+  // The district the map is centered on; MD-08 until the map reports in
+  const [lastDistrict, setLastDistrict] = useState(DEMO_DISTRICT);
   const [group, setGroup] = useState<GroupFilter>("all");
   const [tag, setTag] = useState<string | null>(null);
   // Where to go back to when the Saved tab is turned off
@@ -61,32 +78,63 @@ export default function MapView() {
       .catch(() => setError("The district map didn't load. Check your connection and refresh the page."));
   }, []);
 
-  // Districts outside the metro area have no business file yet
-  const districtInfo = districts?.features.find((feature) => feature.properties.id === districtId)?.properties;
-  const noData = districtInfo !== undefined && !districtInfo.has_data;
+  const boxes = useMemo(() => (districts ? districtBoxes(districts) : new Map()), [districts]);
 
+  const centerDistrict = (view && districts && districtAt(view.center, districts, boxes)) ?? lastDistrict;
+  const centerInfo = districts?.features.find((feature) => feature.properties.id === centerDistrict)?.properties;
+  const zoomedIn = view === null || view.zoom >= PIN_MIN_ZOOM;
+
+  function handleViewChange(next: View) {
+    setView(next);
+    if (districts) {
+      const here = districtAt(next.center, districts, boxes);
+      if (here) setLastDistrict(here);
+    }
+  }
+
+  // Load the business file of every district on screen that has one
   useEffect(() => {
-    if (noData) return;
-    let cancelled = false;
-    fetch(`/data/businesses/${districtId}.geojson`)
-      .then((response) => (response.ok ? response.json() : Promise.reject(response.statusText)))
-      .then((data: BusinessCollection) => {
-        if (!cancelled) setLoadedBusinesses({ districtId, data });
-      })
-      .catch(() => {
-        if (!cancelled) setError("Businesses for this district didn't load. Check your connection and refresh.");
-      });
-    return () => {
-      cancelled = true;
+    if (!districts || !view || view.zoom < PIN_MIN_ZOOM) return;
+    for (const feature of districts.features) {
+      const { id, has_data } = feature.properties;
+      const box = boxes.get(id);
+      if (!has_data || !box || requested.current.has(id) || !boxesOverlap(box, view.bounds)) continue;
+      requested.current.add(id);
+      fetch(`/data/businesses/${id}.geojson`)
+        .then((response) => (response.ok ? response.json() : Promise.reject(response.statusText)))
+        .then((data: BusinessCollection) => setByDistrict((current) => ({ ...current, [id]: data })))
+        .catch(() => {
+          requested.current.delete(id); // try again on the next move
+          setError("Some businesses didn't load. Check your connection, then move the map to retry.");
+        });
+    }
+  }, [districts, boxes, view]);
+
+  // One collection for the map, each business tagged with its district and rank
+  const businesses = useMemo<BusinessCollection>(
+    () => ({
+      type: "FeatureCollection",
+      features: Object.entries(byDistrict).flatMap(([district, collection]) =>
+        collection.features.map((feature) => ({
+          ...feature,
+          properties: { ...feature.properties, district, rank: rank(feature.properties) },
+        })),
+      ),
+    }),
+    [byDistrict],
+  );
+
+  const inView = useMemo(() => {
+    if (!view || !zoomedIn) return null;
+    return {
+      type: "FeatureCollection" as const,
+      features: businesses.features.filter((feature) => inBounds(feature.geometry.coordinates, view.bounds)),
     };
-  }, [districtId, noData]);
+  }, [businesses, view, zoomedIn]);
 
-  // Ignore data from the previous district while the new one loads
-  const businesses = !noData && loadedBusinesses?.districtId === districtId ? loadedBusinesses.data : null;
-
-  // Looked up by id so a search pick in another district opens once its data arrives
+  // Looked up by id, so a search pick elsewhere opens once its district loads
   const selectedFeature = useMemo(
-    () => businesses?.features.find((feature) => feature.properties.id === selectedId) ?? null,
+    () => businesses.features.find((feature) => feature.properties.id === selectedId) ?? null,
     [businesses, selectedId],
   );
   const selected = selectedFeature?.properties ?? null;
@@ -118,15 +166,16 @@ export default function MapView() {
   }
 
   const tags = useMemo(
-    () => (group === "all" || group === "saved" ? [] : tagOptions(businesses, group)),
-    [businesses, group],
+    () => (group === "all" || group === "saved" ? [] : tagOptions(inView, group)),
+    [inView, group],
   );
 
   const counts = useMemo(() => {
     const result = Object.fromEntries(GROUPS.map((g) => [g.id, 0])) as Record<GroupId, number>;
-    for (const feature of businesses?.features ?? []) result[feature.properties.group] += 1;
+    for (const feature of inView?.features ?? []) result[feature.properties.group] += 1;
     return result;
-  }, [businesses]);
+  }, [inView]);
+  const inViewTotal = inView?.features.length ?? 0;
 
   const choices = useMemo(
     () =>
@@ -137,21 +186,18 @@ export default function MapView() {
     [districts],
   );
 
-  function changeDistrict(id: string) {
-    if (id === districtId) return;
-    setDistrictId(id);
-    setSelectedId(null);
-    setTag(null); // the new district may not have this type
+  function goToDistrict(id: string) {
+    setFlyToDistrict({ id, key: Date.now() });
     setError(null);
   }
 
-  function changeGroup(requested: GroupFilter) {
+  function changeGroup(requestedGroup: GroupFilter) {
     // Saved works as a toggle: pressing it again returns to the previous tab
-    let next = requested;
-    if (requested === "saved" && group === "saved") next = groupBeforeSaved;
-    else if (requested === "saved") {
+    let next = requestedGroup;
+    if (requestedGroup === "saved" && group === "saved") next = groupBeforeSaved;
+    else if (requestedGroup === "saved") {
       setGroupBeforeSaved(group);
-      setFitSavedKey(Date.now()); // show every saved spot, whatever the district
+      setFitSavedKey(Date.now()); // show every saved spot, wherever it is
     }
     setGroup(next);
     setTag(null);
@@ -168,11 +214,16 @@ export default function MapView() {
       name: properties.name,
       group: properties.group,
       category: properties.category,
-      district: districtId,
+      district: properties.district ?? centerDistrict,
       city: properties.city,
       lng: geometry.coordinates[0],
       lat: geometry.coordinates[1],
     });
+  }
+
+  function flyToBusiness(id: string, lng: number, lat: number) {
+    setSelectedId(id);
+    setFocus({ lng, lat, key: Date.now() });
   }
 
   function pickSavedOnMap(spotId: string) {
@@ -181,9 +232,7 @@ export default function MapView() {
   }
 
   function openSaved(spot: SavedSpot) {
-    if (spot.district !== districtId) changeDistrict(spot.district);
-    setSelectedId(spot.id);
-    setFocus({ lng: spot.lng, lat: spot.lat, key: Date.now() });
+    flyToBusiness(spot.id, spot.lng, spot.lat);
   }
 
   function changeTag(next: string | null) {
@@ -198,33 +247,30 @@ export default function MapView() {
   }
 
   function pickSearchResult(entry: SearchEntry) {
-    if (entry.district !== districtId) changeDistrict(entry.district);
     if (group !== "all" && (group === "saved" ? !isSaved(entry.id) : group !== entry.group)) setGroup("all");
     setTag(null); // a search pick must not be hidden by a type filter
-    setSelectedId(entry.id);
-    setFocus({ lng: entry.lng, lat: entry.lat, key: Date.now() });
+    flyToBusiness(entry.id, entry.lng, entry.lat);
   }
+
+  let placeLine = "Finding local businesses…";
+  if (!zoomedIn) placeLine = "Zoom in to see local businesses";
+  else if (centerInfo && !centerInfo.has_data) placeLine = "Not mapped yet";
+  else if (inView) placeLine = `${inViewTotal.toLocaleString()} independent businesses in view`;
 
   return (
     <div className={styles.view}>
       <header className={styles.header}>
         <div className={styles.place}>
           <p className={styles.brand}>Local Map</p>
-          <h1 className={styles.placeName}>{districtTitle(districtId)}</h1>
-          <p className={styles.placeLine}>
-            {noData
-              ? "Not mapped yet"
-              : businesses
-                ? `${businesses.features.length.toLocaleString()} independent businesses on the map`
-                : "Finding local businesses…"}
-          </p>
+          <h1 className={styles.placeName}>{districtTitle(centerDistrict)}</h1>
+          <p className={styles.placeLine}>{placeLine}</p>
         </div>
-        <SearchBox currentDistrict={districtId} onPick={pickSearchResult} onPickTag={showTag} />
+        <SearchBox currentDistrict={centerDistrict} onPick={pickSearchResult} onPickTag={showTag} />
         <label className={styles.picker}>
-          <span>Switch district</span>
-          <select value={districtId} onChange={(event) => changeDistrict(event.target.value)}>
-            {!choices.some((district) => district.id === districtId) && (
-              <option value={districtId}>{districtTitle(districtId)}</option>
+          <span>Go to district</span>
+          <select value={centerDistrict} onChange={(event) => goToDistrict(event.target.value)}>
+            {!choices.some((district) => district.id === centerDistrict) && (
+              <option value={centerDistrict}>{districtTitle(centerDistrict)}</option>
             )}
             {choices.map((district) => (
               <option key={district.id} value={district.id}>
@@ -250,7 +296,8 @@ export default function MapView() {
         {districts && (
           <BusinessMap
             districts={districts}
-            districtId={districtId}
+            highlightDistrictId={view ? districtAt(view.center, districts, boxes) : DEMO_DISTRICT}
+            flyToDistrict={flyToDistrict}
             businesses={businesses}
             group={group}
             tag={tag}
@@ -260,17 +307,16 @@ export default function MapView() {
             focus={focus}
             onSelect={selectBusiness}
             onSavedPick={pickSavedOnMap}
-            onDistrictPick={changeDistrict}
+            onDistrictPick={goToDistrict}
+            onViewChange={handleViewChange}
             routing={routing}
           />
         )}
-        {noData && (
-          <p className={styles.status}>
-            We haven&apos;t mapped businesses here yet. Try a district closer to DC.
-          </p>
+        {zoomedIn && centerInfo && !centerInfo.has_data && (
+          <p className={styles.status}>We haven&apos;t mapped businesses here yet. Try somewhere closer to DC.</p>
         )}
-        {!businesses && !noData && !error && <p className={styles.status}>Finding local businesses…</p>}
-        <p className={styles.hint}>Double-click a district to switch to it</p>
+        {!zoomedIn && group !== "saved" && <p className={styles.status}>Zoom in to see local businesses</p>}
+        <p className={styles.hint}>Double-click a district to jump to it</p>
         {error && <p className={styles.status}>{error}</p>}
         {navigation.destination ? (
           <DirectionsPanel session={navigation} />
@@ -286,7 +332,7 @@ export default function MapView() {
           group === "saved" && (
             <SavedPanel
               saved={saved}
-              currentDistrict={districtId}
+              currentDistrict={centerDistrict}
               onOpen={openSaved}
               onRemove={removeSaved}
               onClose={() => changeGroup("saved")}

@@ -48,7 +48,6 @@ function hideBaseMapBusinesses(_previous: StyleSpecification | undefined, next: 
   };
 }
 
-const EMPTY: BusinessCollection = { type: "FeatureCollection", features: [] };
 const EMPTY_FEATURES = { type: "FeatureCollection" as const, features: [] };
 
 const ROUTE_COLOR = "#171717";
@@ -56,6 +55,33 @@ const INK = "#171717";
 const MARIGOLD = "#f0b33c";
 /** Business names appear beside pins from this zoom in, like storefront signs */
 const LABEL_MIN_ZOOM = 15;
+/** No business pins further out than this; only saved spots */
+export const PIN_MIN_ZOOM = 9;
+/** Pin image: a dot in the group color with a white edge */
+const PIN_DIAMETER = 14;
+const PIN_PIXEL_RATIO = 2;
+
+/** Draws one pin image per group, so pins can be symbols that avoid overlapping */
+function pinImage(color: string) {
+  const size = (PIN_DIAMETER + 4) * PIN_PIXEL_RATIO;
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = size;
+  const context = canvas.getContext("2d")!;
+  context.beginPath();
+  context.arc(size / 2, size / 2, (PIN_DIAMETER / 2) * PIN_PIXEL_RATIO, 0, Math.PI * 2);
+  context.fillStyle = color;
+  context.fill();
+  context.lineWidth = 2 * PIN_PIXEL_RATIO;
+  context.strokeStyle = "#ffffff";
+  context.stroke();
+  return context.getImageData(0, 0, size, size);
+}
+
+export interface MapView {
+  bounds: [number, number, number, number];
+  zoom: number;
+  center: [number, number];
+}
 
 // Switching districts flies: zoom out, glide, zoom back in
 const DISTRICT_FLIGHT_MS = 2400;
@@ -91,8 +117,12 @@ const GROUP_COLOR = [
 
 interface Props {
   districts: DistrictCollection;
-  districtId: string;
-  businesses: BusinessCollection | null;
+  /** Outlined in bold: the district at the center of the map */
+  highlightDistrictId: string | null;
+  /** Fly to this district when `key` changes; the first one is a jump, not a flight */
+  flyToDistrict: { id: string; key: number };
+  /** Every business loaded so far, from every district on screen */
+  businesses: BusinessCollection;
   group: GroupFilter;
   /** A type inside the group, e.g. "pizza"; see lib/tags.ts */
   tag: string | null;
@@ -108,6 +138,8 @@ interface Props {
   onSavedPick: (spotId: string) => void;
   /** Double-clicking a district switches to it */
   onDistrictPick: (districtId: string) => void;
+  /** After every pan or zoom */
+  onViewChange: (view: MapView) => void;
   routing: RoutingLayer;
 }
 
@@ -133,7 +165,8 @@ function districtBounds(districts: DistrictCollection, districtId: string) {
 
 export default function BusinessMap({
   districts,
-  districtId,
+  highlightDistrictId,
+  flyToDistrict,
   businesses,
   group,
   tag,
@@ -144,6 +177,7 @@ export default function BusinessMap({
   onSelect,
   onSavedPick,
   onDistrictPick,
+  onViewChange,
   routing,
 }: Props) {
   const container = useRef<HTMLDivElement>(null);
@@ -159,13 +193,15 @@ export default function BusinessMap({
   const onSelectRef = useRef(onSelect);
   const onSavedPickRef = useRef(onSavedPick);
   const onDistrictPickRef = useRef(onDistrictPick);
+  const onViewChangeRef = useRef(onViewChange);
   const routingRef = useRef(routing);
   useEffect(() => {
     onSelectRef.current = onSelect;
     onSavedPickRef.current = onSavedPick;
     onDistrictPickRef.current = onDistrictPick;
+    onViewChangeRef.current = onViewChange;
     routingRef.current = routing;
-  }, [onSelect, onSavedPick, onDistrictPick, routing]);
+  }, [onSelect, onSavedPick, onDistrictPick, onViewChange, routing]);
 
   useEffect(() => {
     if (!container.current) return;
@@ -180,8 +216,11 @@ export default function BusinessMap({
     instance.addControl(new NavigationControl({ showCompass: false }), "top-right");
 
     instance.on("load", () => {
+      for (const group of GROUPS) {
+        instance.addImage(`pin-${group.id}`, pinImage(group.color), { pixelRatio: PIN_PIXEL_RATIO });
+      }
       instance.addSource("districts", { type: "geojson", data: districts });
-      instance.addSource("businesses", { type: "geojson", data: EMPTY });
+      instance.addSource("businesses", { type: "geojson", data: EMPTY_FEATURES });
       instance.addSource("saved", { type: "geojson", data: EMPTY_FEATURES });
       instance.addSource("route", { type: "geojson", data: EMPTY_FEATURES });
       instance.addSource("route-start", { type: "geojson", data: EMPTY_FEATURES });
@@ -222,16 +261,30 @@ export default function BusinessMap({
         layout: { "line-cap": "round", "line-join": "round" },
         paint: { "line-color": ROUTE_COLOR, "line-width": ["interpolate", ["linear"], ["zoom"], 10, 3.5, 16, 8] },
       });
+      // Like Google Maps: pins are symbols, so ones that would overlap are hidden.
+      // Zoomed out, wide padding leaves only a few; zooming in reveals more.
+      // When pins compete for space, the business with more information wins
+      // (`rank`, set in MapView).
       instance.addLayer({
         id: "businesses",
-        type: "circle",
+        type: "symbol",
         source: "businesses",
-        paint: {
-          "circle-color": GROUP_COLOR,
-          "circle-radius": ["interpolate", ["linear"], ["zoom"], 9, 3.5, 12, 5, 15, 7, 17, 9],
-          "circle-stroke-color": "#ffffff",
-          "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 9, 0.5, 14, 1.5],
+        minzoom: PIN_MIN_ZOOM,
+        layout: {
+          "icon-image": ["concat", "pin-", ["get", "group"]],
+          "icon-size": ["interpolate", ["linear"], ["zoom"], 9, 0.75, 13, 1, 17, 1.2],
+          "icon-padding": ["interpolate", ["linear"], ["zoom"], 9, 24, 11, 12, 13, 5, 15, 2],
+          "icon-allow-overlap": false,
+          "symbol-sort-key": ["-", 0, ["coalesce", ["get", "rank"], 0]],
+          "text-field": ["step", ["zoom"], "", LABEL_MIN_ZOOM, ["get", "name"]],
+          "text-font": ["Noto Sans Regular"], // a font the base map's glyph server has
+          "text-size": 12,
+          "text-anchor": "left",
+          "text-offset": [0.9, 0],
+          "text-max-width": 9,
+          "text-optional": true,
         },
+        paint: { "text-color": INK, "text-halo-color": "#ffffff", "text-halo-width": 1.5 },
       });
 
       // Saved spots come from the saved list, not the district file, so they
@@ -255,22 +308,6 @@ export default function BusinessMap({
         layout: {
           "text-field": ["get", "name"],
           "text-font": ["Noto Sans Regular"],
-          "text-size": 12,
-          "text-anchor": "left",
-          "text-offset": [0.9, 0],
-          "text-max-width": 9,
-          "text-optional": true,
-        },
-        paint: { "text-color": INK, "text-halo-color": "#ffffff", "text-halo-width": 1.5 },
-      });
-      instance.addLayer({
-        id: "business-labels",
-        type: "symbol",
-        source: "businesses",
-        minzoom: LABEL_MIN_ZOOM,
-        layout: {
-          "text-field": ["get", "name"],
-          "text-font": ["Noto Sans Regular"], // a font the base map's glyph server has
           "text-size": 12,
           "text-anchor": "left",
           "text-offset": [0.9, 0],
@@ -341,6 +378,18 @@ export default function BusinessMap({
         });
       }
 
+      const reportView = () => {
+        const bounds = instance.getBounds();
+        const center = instance.getCenter();
+        onViewChangeRef.current({
+          bounds: [bounds.getWest(), bounds.getSouth(), bounds.getEast(), bounds.getNorth()],
+          zoom: instance.getZoom(),
+          center: [center.lng, center.lat],
+        });
+      };
+      instance.on("moveend", reportView);
+      reportView();
+
       setLoaded(true);
     });
 
@@ -355,8 +404,12 @@ export default function BusinessMap({
 
   useEffect(() => {
     if (!loaded || !map.current) return;
-    map.current.setFilter("district-selected", ["==", ["get", "id"], districtId]);
-    const bounds = districtBounds(districts, districtId);
+    map.current.setFilter("district-selected", ["==", ["get", "id"], highlightDistrictId ?? ""]);
+  }, [loaded, highlightDistrictId]);
+
+  useEffect(() => {
+    if (!loaded || !map.current) return;
+    const bounds = districtBounds(districts, flyToDistrict.id);
     const camera = bounds && map.current.cameraForBounds(bounds, { padding: 40 });
     if (!camera) return;
     if (firstDistrictView.current) {
@@ -373,7 +426,7 @@ export default function BusinessMap({
       curve: DISTRICT_FLIGHT_CURVE,
       easing: easeInOutCubic,
     });
-  }, [loaded, districts, districtId]);
+  }, [loaded, districts, flyToDistrict]);
 
   // Declared after the district effect so a search pick's flyTo wins over fitBounds
   useEffect(() => {
@@ -388,7 +441,7 @@ export default function BusinessMap({
 
   useEffect(() => {
     if (!loaded || !map.current) return;
-    (map.current.getSource("businesses") as GeoJSONSource).setData(businesses ?? EMPTY);
+    (map.current.getSource("businesses") as GeoJSONSource).setData(businesses);
   }, [loaded, businesses]);
 
   useEffect(() => {
@@ -399,11 +452,8 @@ export default function BusinessMap({
     if (tag) conditions.push(["in", `;${tag};`, ["get", "tags"]]);
     const filter = conditions.length === 0 ? null : (["all", ...conditions] as ExpressionSpecification);
     map.current.setFilter("businesses", filter);
-    map.current.setFilter("business-labels", filter);
     // The Saved tab shows only saved spots, from every district
-    const visibility = group === "saved" ? "none" : "visible";
-    map.current.setLayoutProperty("businesses", "visibility", visibility);
-    map.current.setLayoutProperty("business-labels", "visibility", visibility);
+    map.current.setLayoutProperty("businesses", "visibility", group === "saved" ? "none" : "visible");
   }, [loaded, group, tag]);
 
   useEffect(() => {
