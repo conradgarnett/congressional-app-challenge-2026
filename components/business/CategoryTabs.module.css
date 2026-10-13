@@ -29,16 +29,15 @@
 }
 
 .tab[aria-selected="true"] {
-  border-color: var(--sign);
-  background: var(--sign);
-  color: #ffffff;
+  border-color: var(--action);
+  background: var(--action);
+  color: var(--on-action);
 }
 
 .dot {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  box-shadow: 0 0 0 2px rgb(255 255 255 / 0.9);
 }
 
 .count {
@@ -59,12 +58,6 @@
 
 .saved[aria-selected="true"] {
   border-color: var(--marigold);
-  background: #fff6e1;
+  background: var(--paper);
   color: var(--ink);
-}
-
-@media (prefers-color-scheme: dark) {
-  .saved[aria-selected="true"] {
-    background: #3a2f17;
-  }
 }

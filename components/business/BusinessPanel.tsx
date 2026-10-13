@@ -41,16 +41,15 @@ export default function BusinessPanel({ business, saved, onClose, onDirections, 
   const features = businessTags(business).filter((tag) => FEATURE_TAGS.has(tag)).map(tagLabel);
 
   return (
-    <aside
-      className={styles.panel}
-      aria-label={business.name}
-      style={{ "--accent": group?.color } as React.CSSProperties}
-    >
+    <aside className={styles.panel} aria-label={business.name}>
       <button type="button" className={styles.close} onClick={onClose} aria-label="Close">
         ×
       </button>
       <h2 className={styles.name}>{business.name}</h2>
-      <p className={styles.category}>{describe(business)}</p>
+      <p className={styles.category}>
+        <span className={styles.dot} style={{ background: group?.color }} aria-hidden />
+        {describe(business)}
+      </p>
       {features.length > 0 && (
         <ul className={styles.features} aria-label="Features">
           {features.map((feature) => (

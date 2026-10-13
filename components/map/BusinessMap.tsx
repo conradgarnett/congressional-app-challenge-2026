@@ -16,6 +16,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { GROUPS, type GroupFilter } from "@/lib/groups";
 import type { BusinessCollection, DistrictCollection } from "@/types/business";
 import type { LngLat } from "@/types/routing";
+import type { SavedSpot } from "@/hooks/useSaved";
 
 // Copied into public/ by scripts/copy-maplibre-worker.mjs
 setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
@@ -23,7 +24,8 @@ setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
 // OpenFreeMap: free OSM vector tiles, no key. Vector (not image) tiles let us
 // hide the base map's own business icons, so chains like Shell or Walmart
 // don't show up next to our small-business pins.
-const BASE_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty";
+// "Positron": a quiet gray style, so the pins carry the color
+const BASE_STYLE_URL = "https://tiles.openfreemap.org/styles/positron";
 
 // Landmark icons that stay on the base map. Every other point of interest
 // (shops, restaurants, gas stations, banks...) is hidden.
@@ -49,8 +51,8 @@ function hideBaseMapBusinesses(_previous: StyleSpecification | undefined, next: 
 const EMPTY: BusinessCollection = { type: "FeatureCollection", features: [] };
 const EMPTY_FEATURES = { type: "FeatureCollection" as const, features: [] };
 
-const ROUTE_COLOR = "#0e7c5a";
-const INK = "#1d2b26";
+const ROUTE_COLOR = "#171717";
+const INK = "#171717";
 const MARIGOLD = "#f0b33c";
 /** Business names appear beside pins from this zoom in, like storefront signs */
 const LABEL_MIN_ZOOM = 15;
@@ -94,15 +96,27 @@ interface Props {
   group: GroupFilter;
   /** A type inside the group, e.g. "pizza"; see lib/tags.ts */
   tag: string | null;
-  /** The visitor's saved spots: ringed in marigold, and the only pins on the Saved tab */
-  savedIds: string[];
+  /** The visitor's saved spots, from every district: always shown, ringed in marigold */
+  saved: SavedSpot[];
+  /** Fit the map to all saved spots when this changes */
+  fitSavedKey: number;
   selectedId: string | null;
   /** Fly here when it changes (a search pick); `key` lets the same spot re-trigger */
   focus: { lng: number; lat: number; key: number } | null;
   onSelect: (businessId: string | null) => void;
+  /** A saved spot was clicked; it may be in another district */
+  onSavedPick: (spotId: string) => void;
   /** Double-clicking a district switches to it */
   onDistrictPick: (districtId: string) => void;
   routing: RoutingLayer;
+}
+
+/** Leave room for a floating panel: on the left on wide screens, at the bottom on phones */
+function panelPadding(map: MapLibreMap) {
+  const { clientWidth, clientHeight } = map.getContainer();
+  return clientWidth < 640
+    ? { top: 40, bottom: Math.round(clientHeight * 0.6), left: 30, right: 30 }
+    : { top: 60, bottom: 60, left: 420, right: 60 };
 }
 
 function districtBounds(districts: DistrictCollection, districtId: string) {
@@ -123,10 +137,12 @@ export default function BusinessMap({
   businesses,
   group,
   tag,
-  savedIds,
+  saved,
+  fitSavedKey,
   selectedId,
   focus,
   onSelect,
+  onSavedPick,
   onDistrictPick,
   routing,
 }: Props) {
@@ -134,16 +150,22 @@ export default function BusinessMap({
   const map = useRef<MapLibreMap | null>(null);
   const [loaded, setLoaded] = useState(false);
   const firstDistrictView = useRef(true);
+  const savedRef = useRef(saved);
+  useEffect(() => {
+    savedRef.current = saved;
+  }, [saved]);
 
   // Keep the latest callbacks without re-creating the map
   const onSelectRef = useRef(onSelect);
+  const onSavedPickRef = useRef(onSavedPick);
   const onDistrictPickRef = useRef(onDistrictPick);
   const routingRef = useRef(routing);
   useEffect(() => {
     onSelectRef.current = onSelect;
+    onSavedPickRef.current = onSavedPick;
     onDistrictPickRef.current = onDistrictPick;
     routingRef.current = routing;
-  }, [onSelect, onDistrictPick, routing]);
+  }, [onSelect, onSavedPick, onDistrictPick, routing]);
 
   useEffect(() => {
     if (!container.current) return;
@@ -160,6 +182,7 @@ export default function BusinessMap({
     instance.on("load", () => {
       instance.addSource("districts", { type: "geojson", data: districts });
       instance.addSource("businesses", { type: "geojson", data: EMPTY });
+      instance.addSource("saved", { type: "geojson", data: EMPTY_FEATURES });
       instance.addSource("route", { type: "geojson", data: EMPTY_FEATURES });
       instance.addSource("route-start", { type: "geojson", data: EMPTY_FEATURES });
       instance.addSource("user", { type: "geojson", data: EMPTY_FEATURES });
@@ -211,17 +234,34 @@ export default function BusinessMap({
         },
       });
 
+      // Saved spots come from the saved list, not the district file, so they
+      // show in every district
       instance.addLayer({
-        id: "business-saved",
+        id: "saved-pins",
         type: "circle",
-        source: "businesses",
-        filter: ["in", ["get", "id"], ["literal", []]],
+        source: "saved",
         paint: {
-          "circle-color": "rgba(0,0,0,0)",
-          "circle-radius": ["interpolate", ["linear"], ["zoom"], 9, 6, 12, 8, 15, 10, 17, 12],
+          "circle-color": GROUP_COLOR,
+          "circle-radius": ["interpolate", ["linear"], ["zoom"], 9, 4, 12, 5.5, 15, 7, 17, 9],
           "circle-stroke-color": MARIGOLD,
-          "circle-stroke-width": 2.5,
+          "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 9, 2.5, 15, 3.5],
         },
+      });
+      instance.addLayer({
+        id: "saved-labels",
+        type: "symbol",
+        source: "saved",
+        minzoom: LABEL_MIN_ZOOM,
+        layout: {
+          "text-field": ["get", "name"],
+          "text-font": ["Noto Sans Regular"],
+          "text-size": 12,
+          "text-anchor": "left",
+          "text-offset": [0.9, 0],
+          "text-max-width": 9,
+          "text-optional": true,
+        },
+        paint: { "text-color": INK, "text-halo-color": "#ffffff", "text-halo-width": 1.5 },
       });
       instance.addLayer({
         id: "business-labels",
@@ -280,20 +320,26 @@ export default function BusinessMap({
           routingRef.current.onPick([event.lngLat.lng, event.lngLat.lat]);
           return;
         }
-        const hits = instance.queryRenderedFeatures(event.point, { layers: ["businesses"] });
-        onSelectRef.current(hits.length > 0 ? (hits[0].properties.id as string) : null);
+        const hits = instance.queryRenderedFeatures(event.point, { layers: ["businesses", "saved-pins"] });
+        const business = hits.find((hit) => hit.layer.id === "businesses");
+        const savedSpot = hits.find((hit) => hit.layer.id === "saved-pins");
+        if (business) onSelectRef.current(business.properties.id as string);
+        else if (savedSpot) onSavedPickRef.current(savedSpot.properties.id as string);
+        else onSelectRef.current(null);
       });
       instance.on("dblclick", (event) => {
         if (routingRef.current.picking) return;
         const hit = instance.queryRenderedFeatures(event.point, { layers: ["district-area"] })[0];
         if (hit) onDistrictPickRef.current(hit.properties.id as string);
       });
-      instance.on("mouseenter", "businesses", () => {
-        if (!routingRef.current.picking) instance.getCanvas().style.cursor = "pointer";
-      });
-      instance.on("mouseleave", "businesses", () => {
-        instance.getCanvas().style.cursor = routingRef.current.picking ? "crosshair" : "";
-      });
+      for (const layer of ["businesses", "saved-pins"]) {
+        instance.on("mouseenter", layer, () => {
+          if (!routingRef.current.picking) instance.getCanvas().style.cursor = "pointer";
+        });
+        instance.on("mouseleave", layer, () => {
+          instance.getCanvas().style.cursor = routingRef.current.picking ? "crosshair" : "";
+        });
+      }
 
       setLoaded(true);
     });
@@ -348,19 +394,36 @@ export default function BusinessMap({
   useEffect(() => {
     if (!loaded || !map.current) return;
     const conditions: ExpressionSpecification[] = [];
-    if (group === "saved") conditions.push(["in", ["get", "id"], ["literal", savedIds]]);
-    else if (group !== "all") conditions.push(["==", ["get", "group"], group]);
+    if (group !== "all" && group !== "saved") conditions.push(["==", ["get", "group"], group]);
     // tags look like ";pizza;italian;restaurant;", so ";pizza;" matches whole tags only
     if (tag) conditions.push(["in", `;${tag};`, ["get", "tags"]]);
     const filter = conditions.length === 0 ? null : (["all", ...conditions] as ExpressionSpecification);
     map.current.setFilter("businesses", filter);
     map.current.setFilter("business-labels", filter);
-  }, [loaded, group, tag, savedIds]);
+    // The Saved tab shows only saved spots, from every district
+    const visibility = group === "saved" ? "none" : "visible";
+    map.current.setLayoutProperty("businesses", "visibility", visibility);
+    map.current.setLayoutProperty("business-labels", "visibility", visibility);
+  }, [loaded, group, tag]);
 
   useEffect(() => {
     if (!loaded || !map.current) return;
-    map.current.setFilter("business-saved", ["in", ["get", "id"], ["literal", savedIds]]);
-  }, [loaded, savedIds]);
+    (map.current.getSource("saved") as GeoJSONSource).setData({
+      type: "FeatureCollection",
+      features: saved.map((spot) => ({
+        type: "Feature",
+        properties: { id: spot.id, name: spot.name, group: spot.group },
+        geometry: { type: "Point", coordinates: [spot.lng, spot.lat] },
+      })),
+    });
+  }, [loaded, saved]);
+
+  useEffect(() => {
+    if (!loaded || !map.current || fitSavedKey === 0 || savedRef.current.length === 0) return;
+    const bounds = new LngLatBounds();
+    for (const spot of savedRef.current) bounds.extend([spot.lng, spot.lat]);
+    map.current.fitBounds(bounds, { padding: panelPadding(map.current), maxZoom: 15, duration: 1200 });
+  }, [loaded, fitSavedKey]);
 
   useEffect(() => {
     if (!loaded || !map.current) return;
@@ -379,13 +442,7 @@ export default function BusinessMap({
     if (line && !routingRef.current.following) {
       const bounds = new LngLatBounds();
       for (const point of line) bounds.extend(point);
-      // Leave room for the directions panel: on the left on wide screens, at the bottom on phones
-      const { clientWidth, clientHeight } = map.current.getContainer();
-      const padding =
-        clientWidth < 640
-          ? { top: 40, bottom: Math.round(clientHeight * 0.6), left: 30, right: 30 }
-          : { top: 60, bottom: 60, left: 420, right: 60 };
-      map.current.fitBounds(bounds, { padding, maxZoom: 17 });
+      map.current.fitBounds(bounds, { padding: panelPadding(map.current), maxZoom: 17 });
     }
   }, [loaded, routing.route]);
 

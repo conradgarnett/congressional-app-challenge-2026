@@ -1,17 +1,17 @@
 /*
- * Look: neighborhood main street. Painted sign green for actions, marigold
- * only for saved spots, quiet paper and fog around the map.
+ * Look: minimal and monochrome. The only color in the interface is meaning:
+ * category pins, and marigold for saved spots.
  * Older names (--foreground, --muted...) stay as aliases used across components.
  */
 :root {
-  --ink: #1d2b26;
-  --sign: #1f5f4a;
-  --sign-hover: #174a39;
+  --ink: #171717;
+  --action: #171717;
+  --action-hover: #3a3a3a;
+  --on-action: #ffffff;
   --marigold: #f0b33c;
-  --paper: #fbfbf8;
-  --fog: #e4e8e3;
-  --stone: #5b6862;
-  --route: #0e7c5a;
+  --paper: #ffffff;
+  --fog: #ebebeb;
+  --stone: #6b6b6b;
   --error: #b3261e;
 
   --background: #ffffff;
@@ -19,7 +19,7 @@
   --foreground: var(--ink);
   --muted: var(--stone);
   --border: var(--fog);
-  --link: var(--sign);
+  --link: var(--ink);
 
   --font-display: var(--font-bricolage), "Avenir Next", system-ui, sans-serif;
   --font-body: var(--font-atkinson), system-ui, sans-serif;
@@ -27,15 +27,15 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --ink: #e8efea;
-    --sign: #7cc8a6;
-    --sign-hover: #9bd8bc;
-    --paper: #18201d;
-    --fog: #2c3833;
-    --stone: #a3b1aa;
-    --route: #34b384;
+    --ink: #ededed;
+    --action: #ededed;
+    --action-hover: #c8c8c8;
+    --on-action: #121212;
+    --paper: #161616;
+    --fog: #2b2b2b;
+    --stone: #a0a0a0;
     --error: #ff8a80;
-    --background: #111815;
+    --background: #0f0f0f;
   }
 }
 
@@ -67,7 +67,7 @@ a {
 }
 
 :focus-visible {
-  outline: 2px solid var(--sign);
+  outline: 2px solid var(--ink);
   outline-offset: 2px;
 }
 

@@ -11,25 +11,15 @@
   overflow-y: auto;
   padding: 22px;
   border: 1px solid var(--fog);
-  border-radius: 16px;
+  border-radius: 14px;
   background: var(--paper);
   color: var(--ink);
-  box-shadow: 0 10px 30px rgb(29 43 38 / 0.16);
+  box-shadow: 0 4px 20px rgb(0 0 0 / 0.08);
 }
 
 /* Children keep their size; the panel scrolls instead of squashing them */
 .panel > * {
   flex-shrink: 0;
-}
-
-.panel::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 6px;
-  background: var(--route);
 }
 
 .close {
@@ -46,11 +36,9 @@
 
 .title {
   padding-right: 24px;
-  font-family: var(--font-display);
-  font-size: 24px;
-  font-weight: 650;
-  font-variation-settings: "wdth" 90;
-  line-height: 1.1;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
 }
 
 .titleLead {
@@ -64,8 +52,8 @@
 .banner {
   padding: 14px 16px;
   border-radius: 12px;
-  background: var(--route);
-  color: #ffffff;
+  background: var(--action);
+  color: var(--on-action);
 }
 
 .bannerMain {
@@ -161,8 +149,8 @@
 
 .primary {
   border: none;
-  background: var(--route);
-  color: #ffffff;
+  background: var(--action);
+  color: var(--on-action);
 }
 
 .secondary {

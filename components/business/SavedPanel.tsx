@@ -7,11 +7,15 @@ interface Props {
   currentDistrict: string;
   onOpen: (spot: SavedSpot) => void;
   onRemove: (id: string) => void;
+  onClose: () => void;
 }
 
-export default function SavedPanel({ saved, currentDistrict, onOpen, onRemove }: Props) {
+export default function SavedPanel({ saved, currentDistrict, onOpen, onRemove, onClose }: Props) {
   return (
     <aside className={styles.panel} aria-label="Saved spots">
+      <button type="button" className={styles.close} onClick={onClose} aria-label="Close saved spots">
+        ×
+      </button>
       <h2 className={styles.title}>Your saved spots</h2>
 
       {saved.length === 0 ? (
@@ -24,7 +28,8 @@ export default function SavedPanel({ saved, currentDistrict, onOpen, onRemove }:
           <ul className={styles.list}>
             {saved.map((spot) => {
               const group = GROUPS.find((g) => g.id === spot.group);
-              const where = [spot.city, spot.district !== currentDistrict ? spot.district : null]
+              const district = spot.district === "DC-AL" ? "DC" : spot.district;
+              const where = [spot.city, spot.district !== currentDistrict ? district : null]
                 .filter(Boolean)
                 .join(", ");
               return (

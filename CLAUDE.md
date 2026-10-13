@@ -28,6 +28,13 @@ change makes a rule or fact above the Log wrong, fix that section too.
 
 1. **Drop big chains:** anything with an OSM `brand` or `brand:wikidata` tag,
    plus the Name Suggestion Index chain list.
+1b. **Our own location count** (`pipeline/filter/chains/repeat_locations.py`):
+   a brand name seen 3+ times across the pulled districts is a chain
+   (town removed: "Kusshi Bethesda" counts as Kusshi), and so are 3+
+   businesses sharing a website that contains their name. Names made only
+   of generic words ("China King", "Food Mart") need the website match:
+   they are usually unrelated family businesses. Catches regional chains the
+   lists miss: Kusshi, Moby Dick House of Kabob, Lebanese Taverna, Matchbox.
 2. **Two or fewer locations in the whole US**, not just in the district. A
    national chain can have only one store inside an area; counting by name in
    Montgomery County alone let 419 chain stores through (Costco, KFC, Ace
@@ -81,32 +88,37 @@ Places, Yelp, Foursquare or BestTime.
 
 ## Look and feel
 
-Theme: a neighborhood main street. Set up with Anthropic's `frontend-design`
-skill (installed 2026-10-12); keep new UI consistent with it:
+Minimal and monochrome (Conrad turned down the earlier green, 2026-10-13).
+Set up with Anthropic's `frontend-design` skill (installed 2026-10-12):
 
-- **Colors** (`app/globals.css`): ink `#1d2b26` text, sign green `#1f5f4a`
-  for actions and the brand, marigold `#f0b33c` **only** for saved spots,
-  paper `#fbfbf8` panels, fog `#e4e8e3` borders, stone `#5b6862` muted text,
-  route green `#0e7c5a`. Pin colors live in `lib/groups.ts`.
-- **Type:** Bricolage Grotesque for names and the district title (signage
-  feel); Atkinson Hyperlegible Next for everything else (made by the Braille
-  Institute for low-vision readers).
-- **The one loud element** is the header's place name ("Maryland's 8th
-  District"). Keep everything else quiet.
-- **Words:** plain, sentence case, from the visitor's side ("Switch
-  district", "Your saved spots"). No ALL-CAPS labels, no "A · B · C"
-  strings; use commas. Errors say what happened and what to do.
-- **Panels:** floating sheets with a 6px stripe in the business's group
-  color. Business names appear beside pins from zoom 15 in.
+- **Color only means something:** the five category pin colors
+  (`lib/groups.ts`) and marigold `#f0b33c` for saved spots. Everything else
+  is black, white and grays (`app/globals.css`): ink `#171717`, buttons
+  `--action` black with white text, borders `#ebebeb`, muted text `#6b6b6b`.
+  Dark mode flips them.
+- **Base map:** OpenFreeMap "Positron", a gray style with no shop icons, so
+  the pins are the only color on the map.
+- **Type:** Atkinson Hyperlegible Next everywhere (made by the Braille
+  Institute for low-vision readers). Bricolage Grotesque only for the
+  header's district name, the one loud element.
+- **Words:** plain, sentence case, from the visitor's side. No ALL-CAPS
+  labels, no "A · B · C" strings; use commas. Errors say what happened and
+  what to do.
+- **Panels:** white sheets, hairline border, light shadow; a small colored
+  dot by the type line shows the category. Business names appear beside
+  pins from zoom 15 in.
 
 ## Saved spots
 
 The heart **Save** button in a business panel keeps it in the **Saved** tab
 (`hooks/useSaved.ts`). Saved spots are stored in the browser's
 localStorage: no account, no server, so they stay on that device only.
-Each keeps its name, type, district and position, so the list works across
-districts. Saved pins get a marigold ring on the map; the Saved tab shows
-only them.
+Each keeps its name, type, district and position. They are drawn as their
+own map layer, so they show with a marigold ring **in every district**,
+not just the one selected. The Saved tab hides other pins, zooms out to
+fit every saved spot, and lists them; clicking one in another district
+switches to it. Saved is a toggle: pressing it again (or the list's ×)
+returns to the previous tab.
 
 ## Constraints that will break things if ignored
 
@@ -151,7 +163,7 @@ publicapis.io/open-street-map-api):
   A few hundred moderate queries a day on public servers.
 - **Address search → Nominatim.** Max 1 request per second, descriptive
   User-Agent, no bulk geocoding. OK for a search box on the site.
-- **Map display → MapLibre with OpenFreeMap vector tiles** (free, no key,
+- **Map display → MapLibre with OpenFreeMap vector tiles** ("Positron" style; free, no key,
   OSM data). Not OSM's standard image tiles: those have every shop and gas
   station drawn in, chains included, and image tiles can't hide single
   icons. `BusinessMap.tsx` hides every base-map point of interest except
@@ -238,42 +250,44 @@ python3 -m venv .venv
 | places with no name (can't be counted) | 188 |
 | businesses missing `addr:city` | about half |
 
-**Metro districts after layer 1 (chain filter), 2026-10-02:**
+**Metro districts after the chain filter (layers 1 and 1b), 2026-10-13:**
 
 | district | businesses in OSM | chains | not chains |
 |---|---|---|---|
-| DC-AL | 4,752 | 1,032 | 3,720 |
-| MD-04 | 1,975 | 1,026 | 949 |
-| MD-05 | 2,297 | 1,146 | 1,151 |
-| MD-06 | 3,444 | 1,311 | 2,133 |
-| **MD-08** | **2,687** | **890** | **1,797** |
-| VA-07 | 4,187 | 1,637 | 2,550 |
-| VA-08 | 4,172 | 1,451 | 2,721 |
-| VA-10 | 3,562 | 1,484 | 2,078 |
-| VA-11 | 3,662 | 1,629 | 2,033 |
-| **total** | **30,738** | **11,606** | **19,132** |
+| DC-AL | 4,752 | 1,327 | 3,425 |
+| MD-04 | 1,975 | 1,095 | 880 |
+| MD-05 | 2,297 | 1,195 | 1,102 |
+| MD-06 | 3,444 | 1,426 | 2,018 |
+| **MD-08** | **2,687** | **1,055** | **1,632** |
+| VA-07 | 4,187 | 1,745 | 2,442 |
+| VA-08 | 4,172 | 1,674 | 2,498 |
+| VA-10 | 3,562 | 1,667 | 1,895 |
+| VA-11 | 3,662 | 1,868 | 1,794 |
+| **total** | **30,738** | **13,052** | **17,686** |
 
-Of the chains, 11,475 were caught by an OSM brand tag and only 131 by an NSI
-name match. Brand tags do almost all the work; NSI catches chains that
-mappers forgot to tag.
+Chains by how they were caught: OSM brand tag 11,475, NSI name 131,
+3+ locations by name 1,315, shared website 131.
 
-**Small businesses by map group, 2026-10-05** (chains, unnamed places and
+Brand tags do most of the work; NSI and our own count catch chains mappers
+forgot to tag.
+
+**Small businesses by map group, 2026-10-13** (chains, unnamed places,
 non-businesses and vape shops removed; layer 2 not run yet):
 
 | district | food | groceries | personal care | services | shopping | total |
 |---|---|---|---|---|---|---|
-| DC-AL | 1,917 | 512 | 350 | 245 | 523 | 3,547 |
-| MD-04 | 355 | 110 | 121 | 108 | 140 | 834 |
-| MD-05 | 360 | 146 | 128 | 131 | 177 | 942 |
-| MD-06 | 733 | 234 | 228 | 239 | 381 | 1,815 |
-| **MD-08** | **721** | **167** | **221** | **224** | **309** | **1,642** |
-| VA-07 | 679 | 180 | 345 | 362 | 570 | 2,136 |
-| VA-08 | 1,228 | 150 | 385 | 301 | 459 | 2,523 |
-| VA-10 | 848 | 149 | 256 | 221 | 403 | 1,877 |
-| VA-11 | 906 | 85 | 279 | 199 | 370 | 1,839 |
+| DC-AL | 1,695 | 491 | 334 | 231 | 501 | 3,252 |
+| MD-04 | 309 | 105 | 118 | 103 | 130 | 765 |
+| MD-05 | 331 | 140 | 120 | 129 | 173 | 893 |
+| MD-06 | 675 | 223 | 217 | 222 | 363 | 1,700 |
+| **MD-08** | **607** | **157** | **213** | **213** | **287** | **1,477** |
+| VA-07 | 638 | 172 | 329 | 349 | 545 | 2,033 |
+| VA-08 | 1,080 | 140 | 367 | 281 | 434 | 2,302 |
+| VA-10 | 741 | 138 | 239 | 199 | 377 | 1,694 |
+| VA-11 | 759 | 78 | 256 | 171 | 336 | 1,600 |
 
-All 9 metro districts: 30,738 businesses → 19,132 after chains → 17,435
-after unnamed → 17,250 after non-businesses → **17,155** after vape shops.
+All 9 metro districts: 30,738 businesses → 17,686 after chains → 15,989
+after unnamed → 15,806 after non-businesses → **15,716** after vape shops.
 
 OSM coverage is partial: the real number of businesses is far higher. That is
 why "add a missing business" is a core feature, not an extra.
@@ -453,3 +467,22 @@ why "add a missing business" is a core feature, not an extra.
   Tested in Chrome: saved 2 spots, both listed in the Saved tab with
   marigold rings, still there after a reload; no sideways scrolling at
   390 px wide.
+- **2026-10-13 (minimal design, chain fix, saved everywhere):** Four asks
+  from Conrad. (1) Drop the green, more minimal: interface is now black,
+  white and grays; color only on category pins and saved spots; base map
+  switched to OpenFreeMap Positron; panel color stripes removed. (2) Saved
+  tab couldn't be turned off: pressing it again, or the list's ×, now
+  returns to the previous tab. (3) "Tons of Kusshi sushi places": Kusshi
+  (6 locations) wasn't on OSM's or NSI's chain lists. Added layer 1b, our
+  own count: 352 brand names appeared 3+ times among "small businesses"
+  (1,428 places). Now caught: 1,315 by repeated name (town suffix removed,
+  so "Kusshi Bethesda" counts) and 131 by shared website. Generic names
+  stay unless their website matches. First run flagged 12,098 by website:
+  missing websites were read as the text "nan"; fixed, and the website
+  must contain the business name (a mall's site no longer makes its stores
+  a chain). Result: MD-08 1,642 → 1,477 small businesses; metro 17,155 →
+  15,716. Not caught yet: generic-named chains without a website, and
+  chains with 1-2 locations here (layer 2). (4) Saved spots show in every
+  district: their own map layer from the saved list. Tested in Chrome:
+  saved a spot in MD-08 and one in DC, switched to VA-08, opened Saved; the
+  map zoomed out to show both with marigold rings.

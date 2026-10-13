@@ -35,6 +35,8 @@ import urllib.request
 import geopandas as gpd
 from tqdm import tqdm
 
+from repeat_locations import repeat_location_reasons
+
 ROOT = Path(__file__).resolve().parents[3]
 RAW = ROOT / "data" / "raw"
 IN = ROOT / "data" / "processed" / "businesses.geojson"
@@ -146,6 +148,9 @@ def main() -> None:
     businesses["chain_reason"] = [
         chain_reason(row, brands) for _, row in tqdm(businesses.iterrows(), desc="Filtering chains", unit="biz")
     ]
+    # Layer 1b: our own location count catches regional chains the lists miss
+    repeat = repeat_location_reasons(businesses)
+    businesses["chain_reason"] = businesses.chain_reason.where(businesses.chain_reason.notna(), repeat)
     businesses["chain"] = businesses.chain_reason.notna()
     businesses.to_file(OUT, driver="GeoJSON")
 
@@ -153,7 +158,11 @@ def main() -> None:
     print(f"NSI brand names loaded (our area): {len(brands)}")
     print(f"Businesses: {len(businesses)}, chains: {len(chains)}, not chains: {len(businesses) - len(chains)}")
     by_tag = chains.chain_reason.str.startswith("OSM").sum()
-    print(f"  caught by OSM brand tag: {by_tag}, caught only by NSI name: {len(chains) - by_tag}")
+    by_nsi = chains.chain_reason.str.startswith("NSI").sum()
+    by_count = chains.chain_reason.str.contains("locations in the DC area").sum()
+    by_site = chains.chain_reason.str.startswith("same website").sum()
+    print(f"  caught by OSM brand tag: {by_tag}, NSI name: {by_nsi}, "
+          f"3+ locations by name: {by_count}, shared website: {by_site}")
     print(f"Wrote {OUT.relative_to(ROOT)}")
 
 

@@ -45,12 +45,14 @@ export default function MapView() {
   );
   const [group, setGroup] = useState<GroupFilter>("all");
   const [tag, setTag] = useState<string | null>(null);
+  // Where to go back to when the Saved tab is turned off
+  const [groupBeforeSaved, setGroupBeforeSaved] = useState<GroupFilter>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [focus, setFocus] = useState<{ lng: number; lat: number; key: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const navigation = useRouteSession();
   const { saved, isSaved, toggle: toggleSaved, remove: removeSaved } = useSaved();
-  const savedIds = useMemo(() => saved.map((spot) => spot.id), [saved]);
+  const [fitSavedKey, setFitSavedKey] = useState(0);
 
   useEffect(() => {
     fetch("/data/districts.geojson")
@@ -143,7 +145,14 @@ export default function MapView() {
     setError(null);
   }
 
-  function changeGroup(next: GroupFilter) {
+  function changeGroup(requested: GroupFilter) {
+    // Saved works as a toggle: pressing it again returns to the previous tab
+    let next = requested;
+    if (requested === "saved" && group === "saved") next = groupBeforeSaved;
+    else if (requested === "saved") {
+      setGroupBeforeSaved(group);
+      setFitSavedKey(Date.now()); // show every saved spot, whatever the district
+    }
     setGroup(next);
     setTag(null);
     if (!selected || next === "all") return;
@@ -164,6 +173,11 @@ export default function MapView() {
       lng: geometry.coordinates[0],
       lat: geometry.coordinates[1],
     });
+  }
+
+  function pickSavedOnMap(spotId: string) {
+    const spot = saved.find((s) => s.id === spotId);
+    if (spot && !navigation.destination) openSaved(spot);
   }
 
   function openSaved(spot: SavedSpot) {
@@ -240,10 +254,12 @@ export default function MapView() {
             businesses={businesses}
             group={group}
             tag={tag}
-            savedIds={savedIds}
+            saved={saved}
+            fitSavedKey={fitSavedKey}
             selectedId={selectedId}
             focus={focus}
             onSelect={selectBusiness}
+            onSavedPick={pickSavedOnMap}
             onDistrictPick={changeDistrict}
             routing={routing}
           />
@@ -268,7 +284,13 @@ export default function MapView() {
           />
         ) : (
           group === "saved" && (
-            <SavedPanel saved={saved} currentDistrict={districtId} onOpen={openSaved} onRemove={removeSaved} />
+            <SavedPanel
+              saved={saved}
+              currentDistrict={districtId}
+              onOpen={openSaved}
+              onRemove={removeSaved}
+              onClose={() => changeGroup("saved")}
+            />
           )
         )}
       </div>

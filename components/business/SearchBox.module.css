@@ -17,7 +17,7 @@
 }
 
 .input:focus {
-  outline: 2px solid var(--link);
+  outline: 2px solid var(--ink);
   outline-offset: -1px;
 }
 
@@ -34,7 +34,7 @@
   border-radius: 14px;
   background: var(--paper);
   list-style: none;
-  box-shadow: 0 10px 30px rgb(29 43 38 / 0.16);
+  box-shadow: 0 4px 20px rgb(0 0 0 / 0.08);
 }
 
 .option {

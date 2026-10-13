@@ -141,7 +141,8 @@ export default function SearchBox({ currentDistrict, onPick, onPickTag }: Props)
                     <span className={styles.meta}>
                       {why ?? categoryLabel(option.entry.category)}
                       {option.entry.city && `, ${option.entry.city}`}
-                      {option.entry.district !== currentDistrict && ` (${option.entry.district})`}
+                      {option.entry.district !== currentDistrict &&
+                        ` (${option.entry.district === "DC-AL" ? "DC" : option.entry.district})`}
                     </span>
                   </span>
                 )}

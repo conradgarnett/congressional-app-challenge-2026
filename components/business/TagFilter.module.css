@@ -32,9 +32,9 @@
 }
 
 .chip[aria-pressed="true"] {
-  border-color: var(--sign);
-  background: var(--sign);
-  color: #ffffff;
+  border-color: var(--action);
+  background: var(--action);
+  color: var(--on-action);
 }
 
 .count {

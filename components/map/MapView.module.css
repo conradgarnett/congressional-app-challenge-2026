@@ -20,10 +20,9 @@
 }
 
 .brand {
-  color: var(--sign);
-  font-family: var(--font-display);
+  color: var(--stone);
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 /* The one loud thing on the page: the place you're looking at */
@@ -82,7 +81,7 @@
   background: var(--paper);
   color: var(--ink);
   font-size: 14px;
-  box-shadow: 0 4px 14px rgb(29 43 38 / 0.15);
+  box-shadow: 0 4px 20px rgb(0 0 0 / 0.08);
 }
 
 .hint {
@@ -93,8 +92,8 @@
   transform: translateX(-50%);
   padding: 4px 12px;
   border-radius: 999px;
-  background: rgb(251 251 248 / 0.88);
-  color: #3d4a44;
+  background: rgb(255 255 255 / 0.85);
+  color: #4a4a4a;
   font-size: 12px;
   pointer-events: none;
   white-space: nowrap;
