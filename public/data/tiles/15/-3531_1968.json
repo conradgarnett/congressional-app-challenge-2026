@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.58253,39.64238]},"properties":{"id":"node/12806731239","name":"Mountain Valley Orchard","group":"groceries","category":"shop=farm","tags":";farm;","rank":0,"z":11,"gz":10}}],"stats":[{"c":[2,2],"g":{"groceries":1},"t":{"groceries":{"farm":1}}}]}

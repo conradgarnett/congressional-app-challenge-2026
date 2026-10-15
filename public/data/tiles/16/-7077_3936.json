@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.73931,39.64766]},"properties":{"id":"node/13172313414","name":"Summit Liquors","group":"groceries","category":"shop=alcohol","tags":";alcohol;","rank":0,"z":12,"gz":10}}],"stats":[{"c":[15,15],"g":{"groceries":1},"t":{"groceries":{"alcohol":1}}}]}

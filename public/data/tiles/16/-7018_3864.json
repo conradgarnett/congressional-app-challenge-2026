@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.10014,39.03132]},"properties":{"id":"way/649334113","name":"School Cafeteria","group":"food","category":"amenity=cafe","tags":";cafe;","rank":0,"z":12,"gz":12}}],"stats":[{"c":[2,6],"g":{"food":1},"t":{"food":{"cafe":1}}}]}

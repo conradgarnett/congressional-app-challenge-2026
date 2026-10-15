@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-76.74511,38.71697]},"properties":{"id":"node/11860628437","name":"Two Lions Vineyards, Restaurant, and Winery","group":"food","category":"craft=winery","tags":";winery;","rank":0,"z":10,"gz":10}}],"stats":[{"c":[3,13],"g":{"food":1},"t":{"food":{"winery":1}}}]}

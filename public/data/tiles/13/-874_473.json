@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-76.78289,38.36762]},"properties":{"id":"way/259276762","name":"Chaptico Market","group":"groceries","category":"shop=convenience","tags":";convenience;","rank":0,"z":10,"gz":10}}],"stats":[{"c":[6,6],"g":{"groceries":2},"t":{"groceries":{"convenience":1,"alcohol":1}}}]}

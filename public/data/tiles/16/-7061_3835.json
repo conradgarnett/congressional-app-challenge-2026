@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.57066,38.78299]},"properties":{"id":"way/45829762","name":"MurLarkey Distilled Spirits","group":"food","category":"craft=distillery","tags":";distillery;","rank":0,"z":11,"gz":11}}],"stats":[{"c":[5,5],"g":{"food":1},"t":{"food":{"distillery":1}}}]}

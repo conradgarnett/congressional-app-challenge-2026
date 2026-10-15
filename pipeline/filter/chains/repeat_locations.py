@@ -3,10 +3,10 @@
 Brand tags and the Name Suggestion Index miss regional chains: Kusshi,
 Moby Dick House of Kabob, Lebanese Taverna, Glory Days Grill... Our rule is
 "small business = 2 or fewer locations", so count locations ourselves across
-every district we pulled.
+the whole area we pulled.
 
 A business is a chain here if either:
-  1. Its brand name appears 3+ times across the pulled districts. The brand
+  1. Its brand name appears 3+ times across the pulled area. The brand
      name is the name with a trailing town removed ("Kusshi Bethesda" ->
      "kusshi"). Names made only of generic words ("China King", "Food Mart",
      "Beer & Wine") are skipped: those are usually unrelated family
@@ -15,7 +15,7 @@ A business is a chain here if either:
      (bibibop.com for "Bibibop"). Requiring the name keeps out hosts that
      list many unrelated businesses: a mall's site, a food hall, nps.gov.
 
-Limits: only counts locations inside the districts we pulled. A chain with
+Limits: only counts locations inside the area we pulled. A chain with
 1-2 locations here but many elsewhere still needs layer 2 (national check).
 """
 

@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-76.60602,39.07736]},"properties":{"id":"way/526851806","name":"Cafeteria","group":"food","category":"amenity=cafe","tags":";cafe;","rank":0,"z":11,"gz":11}}],"stats":[{"c":[9,14],"g":{"food":1},"t":{"food":{"cafe":1}}}]}

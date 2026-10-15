@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-76.54506,38.35976]},"properties":{"id":"node/2112534759","name":"Norris's","group":"groceries","category":"shop=convenience","tags":";convenience;","rank":0,"z":10,"gz":10}}],"stats":[{"c":[2,8],"g":{"groceries":1},"t":{"groceries":{"convenience":1}}}]}

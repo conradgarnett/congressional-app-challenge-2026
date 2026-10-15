@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.79766,39.57767]},"properties":{"id":"way/231829721","name":"Camp Store","group":"shopping","category":"shop=camp","tags":";camp;","rank":0,"z":11,"gz":10}}],"stats":[{"c":[5,5],"g":{"shopping":1},"t":{"shopping":{"camp":1}}}]}

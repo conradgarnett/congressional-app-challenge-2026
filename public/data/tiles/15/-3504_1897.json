@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-76.97971,38.43948]},"properties":{"id":"way/845891257","name":"Red Top","group":"groceries","category":"shop=convenience","tags":";convenience;","rank":0,"z":10,"gz":10}}],"stats":[{"c":[9,10],"g":{"groceries":1},"t":{"groceries":{"convenience":1}}}]}

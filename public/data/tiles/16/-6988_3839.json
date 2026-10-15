@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-76.7638,38.8211]},"properties":{"id":"node/671553379","name":"Dutch Farmer's Market","group":"groceries","category":"shop=supermarket","tags":";supermarket;","rank":0,"z":11,"gz":10}}],"stats":[{"c":[12,13],"g":{"groceries":2},"t":{"groceries":{"supermarket":1,"butcher":1}}}]}

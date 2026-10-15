@@ -137,9 +137,7 @@ def main() -> None:
     print(f"  minus unnamed: {after_names}")
     print(f"  minus non-businesses: {after_non_businesses}")
     print(f"  minus vape shops: {len(businesses)}")
-    counts = businesses.pivot_table(index="district", columns="group", values="osm_id", aggfunc="count", fill_value=0)
-    counts["total"] = counts.sum(axis=1)
-    print(counts.to_string())
+    print(businesses.group.value_counts().to_string())
     print(f"Wrote {OUT.relative_to(ROOT)}")
 
 

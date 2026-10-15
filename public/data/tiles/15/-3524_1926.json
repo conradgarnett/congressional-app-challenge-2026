@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.41095,38.93738]},"properties":{"id":"way/117088764","name":"Frying Pan Country Store","group":"groceries","category":"shop=convenience","tags":";convenience;","rank":0,"z":11,"gz":11}}],"stats":[{"c":[15,11],"g":{"groceries":1},"t":{"groceries":{"convenience":1}}}]}

@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-76.94927,39.1712]},"properties":{"id":"node/10921453652","name":"Gorman Farms","group":"groceries","category":"shop=farm","tags":";farm;","rank":0,"z":12,"gz":10}}],"stats":[{"c":[14,13],"g":{"groceries":1},"t":{"groceries":{"farm":1}}}]}

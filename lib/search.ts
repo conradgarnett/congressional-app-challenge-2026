@@ -1,11 +1,11 @@
 import { tagLabel } from "@/lib/tags";
+import { inBounds, type Bounds } from "@/lib/geo/tiles";
 import type { GroupId } from "@/types/business";
 
 /** One business in public/data/search.json (written by pipeline/load/export_site_data.py). */
 export interface SearchEntry {
   id: string;
   name: string;
-  district: string;
   group: GroupId;
   category: string;
   street: string;
@@ -15,7 +15,7 @@ export interface SearchEntry {
   tags: string[];
 }
 
-type Row = [string, string, string, GroupId, string, string, string, number, number, string];
+type Row = [string, string, GroupId, string, string, string, number, number, string];
 
 let index: Promise<SearchEntry[]> | null = null;
 
@@ -24,8 +24,8 @@ export function loadSearchIndex(): Promise<SearchEntry[]> {
   index ??= fetch("/data/search.json")
     .then((response) => (response.ok ? response.json() : Promise.reject(response.statusText)))
     .then(({ rows }: { rows: Row[] }) =>
-      rows.map(([id, name, district, group, category, street, city, lng, lat, tags]) => ({
-        id, name, district, group, category, street, city, lng, lat,
+      rows.map(([id, name, group, category, street, city, lng, lat, tags]) => ({
+        id, name, group, category, street, city, lng, lat,
         tags: tags ? tags.split(";") : [],
       })),
     )
@@ -134,7 +134,7 @@ function knownTags(entries: SearchEntry[]): Set<string> {
 export interface TagMatch {
   tag: string;
   label: string;
-  /** Businesses with the tag in the current district, in `group` */
+  /** Businesses with the tag on screen, in `group` */
   count: number;
   /** The map group most of them are in, for the "show all" action */
   group: GroupId;
@@ -152,9 +152,9 @@ export interface SearchResults {
  *   2  a word in the name starts with it
  *   3  the name contains it
  *   4  the street or city contains it
- * Ties prefer the current district, then alphabetical.
+ * Ties prefer businesses on screen (`view`), then alphabetical.
  */
-export function search(entries: SearchEntry[], query: string, currentDistrict: string, limit = 8): SearchResults {
+export function search(entries: SearchEntry[], query: string, view: Bounds | null, limit = 8): SearchResults {
   const q = normalize(query);
   if (q.length < 2) return { tagMatch: null, entries: [] };
   const tag = queryTag(query, knownTags(entries));
@@ -163,16 +163,17 @@ export function search(entries: SearchEntry[], query: string, currentDistrict: s
   const groupCounts = new Map<GroupId, number>();
   for (const entry of entries) {
     const name = normalize(entry.name);
+    const onScreen = view !== null && inBounds([entry.lng, entry.lat], view);
     let score: number;
     if (tag && entry.tags.includes(tag)) {
       score = 0;
-      if (entry.district === currentDistrict) groupCounts.set(entry.group, (groupCounts.get(entry.group) ?? 0) + 1);
+      if (onScreen) groupCounts.set(entry.group, (groupCounts.get(entry.group) ?? 0) + 1);
     } else if (name.startsWith(q)) score = 1;
     else if (name.includes(` ${q}`)) score = 2;
     else if (name.includes(q)) score = 3;
     else if (normalize(`${entry.street} ${entry.city}`).includes(q)) score = 4;
     else continue;
-    if (entry.district !== currentDistrict) score += 0.5;
+    if (!onScreen) score += 0.5;
     scored.push({ entry, score });
   }
   scored.sort((a, b) => a.score - b.score || a.entry.name.localeCompare(b.entry.name));

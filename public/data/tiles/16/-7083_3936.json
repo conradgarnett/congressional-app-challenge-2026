@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.81285,39.64351]},"properties":{"id":"node/13829983588","name":"My Wood Shop","group":"services","category":"shop=3d_printing","tags":";3d_printing;","rank":0,"z":10,"gz":10}}],"stats":[{"c":[4,7],"g":{"services":1},"t":{"services":{"3d_printing":1}}}]}

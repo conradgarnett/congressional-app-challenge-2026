@@ -2,9 +2,11 @@
 
 # MD-08 Local Map — notes for whoever works on this next
 
-Congressional App Challenge 2026 entry. An interactive map of the DMV that
-finds small, independent businesses and splits them by congressional
-district. The demo uses Maryland's 8th district (Rep. Jamie Raskin).
+Congressional App Challenge 2026 entry (our district: Maryland's 8th, Rep.
+Jamie Raskin). An interactive map of the DC area that finds small,
+independent businesses. Businesses load for whatever part of the map is on
+screen, like Google Maps; the app no longer uses district lines at all
+(removed 2026-10-15).
 
 Team project. Conrad does most of the build. Teammates edit `ideas.txt` and
 `prompt.md` directly on GitHub, so **pull before editing and never overwrite
@@ -16,26 +18,25 @@ change makes a rule or fact above the Log wrong, fix that section too.
 
 ## Scope
 
-- **Whole area:** every congressional district in DC, Maryland and Virginia
-  (20 districts: DC 1, MD 8, VA 11).
-- **Built first:** the 9 DC-metro districts — DC-AL, MD-04, MD-05, MD-06,
-  MD-08, VA-07, VA-08, VA-10, VA-11. "Metro" means at least 25% of the
-  district's area is inside the Census Washington metro area (CBSA 47900).
-  Computed in `pipeline/fetch/districts.py`, not hand-picked.
-- **Demo:** MD-08.
+- **Area covered:** one rectangle, `REGION` in `pipeline/fetch/businesses.py`:
+  longitude -77.9 to -76.5, latitude 38.3 to 39.7. That is DC plus the inner
+  Maryland and Virginia suburbs (Frederick and Columbia in the north, Leesburg
+  in the west, down past Woodbridge). To cover more, widen `REGION` and rerun
+  the pipeline; downloaded cells are cached and reused.
+- **Demo:** the map opens on Bethesda and Rockville (MD-08 country).
 
 ## What counts as a small business
 
 1. **Drop big chains:** anything with an OSM `brand` or `brand:wikidata` tag,
    plus the Name Suggestion Index chain list.
 1b. **Our own location count** (`pipeline/filter/chains/repeat_locations.py`):
-   a brand name seen 3+ times across the pulled districts is a chain
+   a brand name seen 3+ times across the pulled area is a chain
    (town removed: "Kusshi Bethesda" counts as Kusshi), and so are 3+
    businesses sharing a website that contains their name. Names made only
    of generic words ("China King", "Food Mart") need the website match:
    they are usually unrelated family businesses. Catches regional chains the
    lists miss: Kusshi, Moby Dick House of Kabob, Lebanese Taverna, Matchbox.
-2. **Two or fewer locations in the whole US**, not just in the district. A
+2. **Two or fewer locations in the whole US**, not just in our area. A
    national chain can have only one store inside an area; counting by name in
    Montgomery County alone let 419 chain stores through (Costco, KFC, Ace
    Hardware...).
@@ -57,16 +58,43 @@ change makes a rule or fact above the Log wrong, fix that section too.
 
 ## How the map shows businesses
 
-Like Google Maps, not by district. The map loads the business file of every
-district on screen as you pan (`MapView.tsx`), and pins are MapLibre
-symbols that hide when they would overlap (`BusinessMap.tsx`). Zoomed out
-(zoom 9+) only a few well-spread pins show; zooming in reveals more; from
-zoom 15 names appear beside them. When pins compete for space, the business
-with more information wins (`rank`: cuisine tags, website, hours, phone,
-menu). Below zoom 9 no business pins show, only saved spots. Saved spots
-are always visible. The header names the district at the map's center and
-counts the businesses in view; the tab counts and type chips are for what's
-in view too. The district dropdown and double-click fly to a district.
+Business pins are drawn the way Organic Maps draws its map (their renderer,
+`libs/drape_frontend` in organicmaps/organicmaps; read 2026-10-15):
+
+- **Same tiles as Organic Maps.** Their Mercator (x = longitude, y =
+  latitude stretched, both -180..180) and their tile keys: a tile at zoom z
+  is a square 360 / 2^(z-1) Mercator degrees wide, numbered from 0,0 with y
+  going north (`tile_key.cpp`, `tile_utils.cpp`). Their zoom is MapLibre's
+  plus one. Zoom 17 is the deepest data zoom: closer views reuse zoom-17
+  tiles. We export zooms 10 to 17 (pins start at MapLibre zoom 9).
+- **Each zoom holds only what it draws** (their scale index). The pipeline
+  gives every business `z`, the first zoom where it is the best-described
+  business in its cell (16 cells per tile side, about 32 px), and `gz`, the
+  same within its own group, so a category tab zoomed out still has
+  well-spread pins. A zoom-z tile holds businesses with `z` or `gz` up to z;
+  zoom-17 tiles hold every business. "Best-described" is `rank`: cuisine and
+  type tags, website, hours, phone, menu.
+- **Screen coverage** (`ResolveTileKeys`, `CalcTilesCoverage`): on every pan
+  or zoom the site works out the tiles covering the screen plus 75 px, at
+  the current zoom (`lib/geo/tiles.ts`), fetches the missing ones, cancels
+  requests for tiles that left the screen before arriving, and drops tiles
+  that left. Tiles of the previous zoom stay on screen until every new tile
+  has arrived, so zooming never blinks empty (`MapView.tsx`).
+- **Collisions** are MapLibre symbols that hide when they would overlap,
+  best `rank` first, like Organic Maps' overlay tree (`BusinessMap.tsx`).
+  Names appear beside pins from MapLibre zoom 15. Below zoom 9 no business
+  pins show, only saved spots. Saved spots are always visible.
+- **Counts follow the view and count every business, not just the pins
+  shown.** Tiles below zoom 17 carry counts per group and per tag for 16 x 16
+  cells; the site adds the cells on screen (cells cut by the screen edge
+  count by the share on screen). Zoom-17 tiles are counted business by
+  business. Checked against exact counts on 160 random views: median error
+  under 1%; the worst cases (up to about 30%) are small counts where a
+  cluster sits on the screen edge.
+- The header names the town most pins near the middle list as their city
+  ("Bethesda"; "Washington, DC area" when zoomed out or no town is known).
+  Outside the covered rectangle the map says "Not mapped yet". An open
+  business panel stays open when its tile is dropped. Double-click zooms in.
 
 ## Map categories
 
@@ -113,7 +141,7 @@ Set up with Anthropic's `frontend-design` skill (installed 2026-10-12):
   the pins are the only color on the map.
 - **Type:** Atkinson Hyperlegible Next everywhere (made by the Braille
   Institute for low-vision readers). Bricolage Grotesque only for the
-  header's district name, the one loud element.
+  header's place name, the one loud element.
 - **Words:** plain, sentence case, from the visitor's side. No ALL-CAPS
   labels, no "A · B · C" strings; use commas. Errors say what happened and
   what to do.
@@ -126,20 +154,26 @@ Set up with Anthropic's `frontend-design` skill (installed 2026-10-12):
 The heart **Save** button in a business panel keeps it in the **Saved** tab
 (`hooks/useSaved.ts`). Saved spots are stored in the browser's
 localStorage: no account, no server, so they stay on that device only.
-Each keeps its name, type, district and position. They are drawn as their
-own map layer, so they show with a marigold ring **in every district**,
-not just the one selected. The Saved tab hides other pins, zooms out to
-fit every saved spot, and lists them; clicking one in another district
-switches to it. Saved is a toggle: pressing it again (or the list's ×)
+Each keeps its name, type, city and position. They are drawn as their
+own map layer, so they show with a marigold ring **anywhere on the map**,
+even where business tiles haven't loaded. The Saved tab hides other pins,
+zooms out to fit every saved spot, and lists them; clicking one flies
+there. Saved is a toggle: pressing it again (or the list's ×)
 returns to the previous tab.
 
 ## Constraints that will break things if ignored
 
-**District lines are the Census 119th Congress boundaries.** Virginia voters
-approved a mid-decade redraw in April 2026, but the state Supreme Court struck
-it down in May. Maryland's Senate refused to take up a new map. If either state
-redraws, update `DISTRICTS_URL` in `pipeline/fetch/districts.py` and rerun the
-pipeline. Nothing else hardcodes district shapes.
+**The tile scheme lives in the export.** `MIN_TILE_ZOOM`,
+`MAX_DATA_ZOOM`, `THIN_CELLS` and `STAT_CELLS` in
+`pipeline/load/export_site_data.py` decide the tiles; the site reads zooms,
+cells and the covered area from `public/data/tiles.json`. The tile math
+itself (Mercator, tile size, MapLibre zoom + 1) is in both the export and
+`lib/geo/tiles.ts`: change one, change the other.
+
+**Only filtered businesses reach the site.** The export reads
+`small_businesses.geojson` (after the chain filter and `assign_groups.py`)
+and stops with an error if any business in it is not marked "not a chain"
+in `businesses_layer1.geojson` or has no group. Rerun the filters first.
 
 **Search never calls Overpass live.** Every business name already comes
 from Overpass through the pipeline; the search bar searches
@@ -205,10 +239,10 @@ default export**: use named imports.
 - `app/`, `components/`, `features/`, `lib/`, `hooks/`, `types/`: Next.js
   site (App Router, TypeScript). Folder plan from `prompt.md`.
   - `app/page.tsx` renders `components/map/MapView.tsx`: header, search,
-    category tabs, map, panels; loads district files for the view. Opens
-    on MD-08, all groups.
-  - `lib/geo/districts.ts`: district boxes, which districts are on screen,
-    which district a point is in.
+    category tabs, map, panels; loads the business tiles on screen. Opens
+    on Bethesda and Rockville, all groups.
+  - `lib/geo/tiles.ts`: Organic Maps tile math: Mercator, tile zoom,
+    tiles covering the screen, share of a stat cell on screen.
   - `components/map/BusinessMap.tsx`: the MapLibre map (browser only,
     loaded with `ssr: false`).
   - `components/business/CategoryTabs.tsx`, `BusinessPanel.tsx`: tabs with
@@ -216,7 +250,7 @@ default export**: use named imports.
   - `components/business/TagFilter.tsx` + `lib/tags.ts`: type chips inside
     a category tab.
   - `components/business/SearchBox.tsx` + `lib/search.ts`: search bar over
-    every business in every district, by name, street or city.
+    every business, by name, street or city; matches on screen rank first.
   - Directions: `hooks/useRouteSession.ts` (live navigation state: start,
     route, position, next turn, off-route rerouting, demo trip),
     `lib/routing/valhalla.ts` (route requests), `lib/routing/geometry.ts`
@@ -224,18 +258,21 @@ default export**: use named imports.
     `components/routing/DirectionsPanel.tsx`, `types/routing.ts`.
   - `lib/groups.ts`: tab names and pin colors. `types/business.ts`: data types.
 - `public/data/`: the site's data, written by `pipeline/load/export_site_data.py`.
-  `districts.geojson` (outlines) and `businesses/<district>.geojson` (one
-  small file per district, MD-08 is 0.47 MB). `search.json`: every
-  business name across all districts for the search bar (2 MB, 0.55 MB
-  compressed), loaded only when someone clicks into the search bar.
+  `tiles/<z>/<x>_<y>.json` (one Organic Maps tile: GeoJSON pins plus count
+  stats) and `tiles.json` (zooms, covered area, and which tiles have
+  businesses, so the site never asks for an empty one). Committed with the
+  site so hosting needs no pipeline run: about 7,000 small files, 43 MB. `search.json`: every business name for the search
+  bar, loaded only when someone clicks into the search bar.
 - `pipeline/`: offline Python data jobs. Not part of the site.
-  - `fetch/districts.py`: district boundaries → `data/processed/districts.geojson`
-  - `fetch/businesses.py`: OSM businesses per district → `data/processed/businesses.geojson`
+  - `fetch/businesses.py`: OSM businesses in `REGION`, one Overpass query per
+    0.2° cell (cached in `data/raw/osm/cells/`) → `data/processed/businesses.geojson`.
+    A cell that fails is skipped and named at the end; rerun to fill it in.
   - `filter/chains/filter_chains.py`: layer 1 chain filter → `data/processed/businesses_layer1.geojson`
   - `filter/groups/assign_groups.py`: drops chains, unnamed places and
     non-businesses, assigns map groups → `data/processed/small_businesses.geojson`
   - `filter/national`, `filter/matching`: layers 2 and 3 (not built yet)
-  - `load/export_site_data.py`: slim per-district files for the site → `public/data/`
+  - `load/export_site_data.py`: checks every business passed the filters,
+    ranks them, cuts Organic Maps tiles for the site → `public/data/`
   - `load/tagging.py`: tag rules, used by the export
 - `data/raw/`: downloads and caches, git-ignored. `data/processed/`: pipeline
   output, committed.
@@ -249,8 +286,7 @@ Easiest: `./install.sh` (Node and Python dependencies), `./install.sh --data`
 npm install && npm run dev                      # site at localhost:3000
 python3 -m venv .venv
 .venv/bin/pip install -r pipeline/requirements.txt
-.venv/bin/python pipeline/fetch/districts.py    # boundaries
-.venv/bin/python pipeline/fetch/businesses.py   # metro districts; --all for all 20
+.venv/bin/python pipeline/fetch/businesses.py   # OSM download; --refresh ignores the cache
 .venv/bin/python pipeline/filter/chains/filter_chains.py
 .venv/bin/python pipeline/filter/groups/assign_groups.py
 .venv/bin/python pipeline/load/export_site_data.py   # writes public/data/ for the site
@@ -265,6 +301,31 @@ python3 -m venv .venv
 | two or fewer locations by name, no brand tag | ~2,180 |
 | places with no name (can't be counted) | 188 |
 | businesses missing `addr:city` | about half |
+
+**Current data, 2026-10-15** (`REGION` rectangle, 41 of 49 cells): 28,854
+businesses in OSM, 12,448 chains (brand tag 10,901, NSI 134, 3+ locations
+by name 1,285, shared website 128), 14,784 small businesses after unnamed,
+non-businesses and vape shops are removed. By group: food 6,526, shopping
+2,929, personal care 2,101, services 1,708, groceries 1,520. `search.json`
+1.89 MB.
+
+**Organic Maps tiles, 2026-10-15** (43 MB on disk, 6,982 tiles; export
+takes about 25 s):
+
+| zoom (OM) | MapLibre zoom | tiles | pins | median | largest |
+|---|---|---|---|---|---|
+| 10 | 9 | 8 | 1,757 | 99 KB | 314 KB |
+| 11 | 10 | 26 | 3,035 | 27 KB | 329 KB |
+| 12 | 11 | 80 | 4,509 | 11 KB | 299 KB |
+| 13 | 12 | 253 | 6,228 | 3 KB | 256 KB |
+| 14 | 13 | 582 | 8,145 | 2 KB | 164 KB |
+| 15 | 14 | 1,141 | 10,025 | 1 KB | 97 KB |
+| 16 | 15 | 1,903 | 11,810 | 1 KB | 55 KB |
+| 17 | 16+ | 2,989 | 14,784 (all) | 1 KB | 31 KB |
+
+Low-zoom tiles are mostly count stats.
+
+The district tables below are history, from before districts were removed.
 
 **Metro districts after the chain filter (layers 1 and 1b), 2026-10-13:**
 
@@ -515,3 +576,44 @@ why "add a missing business" is a core feature, not an extra.
   steps in, more appear; on Bethesda's Woodmont Avenue every pin has a
   name and none overlap; clicking a pin (Fialova) opens it; a search pick
   in another area loads that district and opens the business.
+- **2026-10-15 (districts removed, screen tiles):** Conrad asked to delete
+  all the Python that defines congressional districts and load businesses
+  for whatever is on screen, Google Maps style. Chose prebuilt map tiles
+  (not live Overpass from the browser, which is slow and rate-limited) and
+  no district UI at all. Deleted `pipeline/fetch/districts.py`,
+  `districts.geojson` and the per-district business files. `businesses.py`
+  now covers one rectangle (`REGION`) in 0.2° cells, skips cells that fail,
+  and has `--offline`. The export writes 0.1° tiles plus `tiles.json`;
+  `MapView` loads tiles on screen. Header shows the main town near the map's
+  center. Search ranks on-screen matches first; Saved and search no longer
+  show district ids. Double-click zooms again. Overpass was "at capacity"
+  all session, so 37 cells were filled from the old per-district caches
+  (one-off script, not in the repo) plus 4 cells that old data covered
+  80-100%. Still missing: 8 cells in the northeast (Columbia, Ellicott City,
+  Baltimore edge); `-77.10_39.10` is about 81% complete. When Overpass is
+  free, delete `data/raw/osm/cells/-77.10_39.10.json` and run
+  `businesses.py` plus the rest of the pipeline. Tested with headless
+  Chrome: the map opens on Bethesda with pins and no district lines; after a
+  drag, new tiles loaded but the header's count and town did not change.
+  Not yet known whether that is a real bug or the fake mouse; check in a
+  real browser.
+- **2026-10-15 (Organic Maps tiles):** Conrad asked to draw the map the way
+  Organic Maps does and cut tiles the same way, keeping every business
+  going through the filter pipeline. First looked at the Organic Maps APK
+  (F-Droid 2026.09.29) with REA: the Java side only passes calls to the C++
+  library `liborganicmaps.so`, so the method was read from their open source
+  instead (`libs/drape_frontend`, `libs/geometry/mercator.cpp`,
+  `libs/indexer/scales.hpp`). Replaced the 0.1° tiles with their tile
+  pyramid, per-zoom thinning, screen coverage plus 75 px, cancelling and
+  dropping off-screen tiles, and keeping the old zoom until the new one
+  arrives (details in "How the map shows businesses"). `rank` moved from
+  the browser to the pipeline. Counts and chips now come from per-tile stats.
+  The export now refuses businesses that didn't pass the chain filter: all
+  14,784 passed. Tested with headless Chrome on a production build: opening
+  view loads 12 zoom-12 tiles, 2,512 businesses in view around Rockville;
+  zooming in loads zoom-14 tiles; a drag now updates the header's town and
+  count (the open question from the last entry is fixed); zoomed out the
+  Groceries tab shows well-spread green pins with chips; a search pick
+  ("Sunshine General Store") opens its panel, which stays open after
+  zooming out. No console errors. Not done: 8 northeast cells are still
+  missing from the data (see the entry above).

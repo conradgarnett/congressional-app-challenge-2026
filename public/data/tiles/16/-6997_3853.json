@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-76.86981,38.94215]},"properties":{"id":"node/6551353817","name":"Ardwick Liquor and Carry Out","group":"groceries","category":"shop=alcohol","tags":";alcohol;","rank":0,"z":11,"gz":11}}],"stats":[{"c":[2,15],"g":{"groceries":1},"t":{"groceries":{"alcohol":1}}}]}

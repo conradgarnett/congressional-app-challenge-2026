@@ -18,7 +18,7 @@ const atkinson = Atkinson_Hyperlegible_Next({
 export const metadata: Metadata = {
   title: "Local Map",
   description:
-    "Find independent small businesses in DC, Maryland and Virginia, by congressional district. Data from OpenStreetMap.",
+    "Find independent small businesses around Washington, DC. Data from OpenStreetMap.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

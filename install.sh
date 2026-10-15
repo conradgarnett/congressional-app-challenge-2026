@@ -86,7 +86,7 @@ Commands:
         Does NOT contact the Overpass API.
 
     ${BOLD}./install.sh --data${NC}
-        Fetches district boundaries and business data,
+        Fetches business data for the DC area,
         then processes the data.
 
     ${BOLD}./install.sh --full${NC}
@@ -152,26 +152,11 @@ install_python() {
 }
 
 # ------------------------------------------------------------
-# Fetch district boundaries
-# ------------------------------------------------------------
-
-fetch_districts() {
-    echo -e "\n${CYAN}${BOLD}[1/4] Fetching district boundaries...${NC}"
-
-    if .venv/bin/python pipeline/fetch/districts.py; then
-        success "District boundaries downloaded."
-    else
-        error "Failed to fetch district boundaries."
-        return 1
-    fi
-}
-
-# ------------------------------------------------------------
 # Fetch business data
 # ------------------------------------------------------------
 
 fetch_businesses() {
-    echo -e "\n${CYAN}${BOLD}[2/4] Fetching business data...${NC}"
+    echo -e "\n${CYAN}${BOLD}[1/3] Fetching business data...${NC}"
 
     echo
     warning "This step uses the OpenStreetMap Overpass API."
@@ -199,7 +184,7 @@ fetch_businesses() {
 # ------------------------------------------------------------
 
 filter_chains() {
-    run_step 3 4 \
+    run_step 2 3 \
         "Filtering big chains" \
         .venv/bin/python pipeline/filter/chains/filter_chains.py
 }
@@ -209,7 +194,7 @@ filter_chains() {
 # ------------------------------------------------------------
 
 finalize_data() {
-    echo -e "\n${CYAN}${BOLD}[4/4] Finalizing site data...${NC}"
+    echo -e "\n${CYAN}${BOLD}[3/3] Finalizing site data...${NC}"
 
     .venv/bin/python pipeline/filter/groups/assign_groups.py
     .venv/bin/python pipeline/load/export_site_data.py
@@ -299,7 +284,6 @@ data_pipeline() {
         .venv/bin/python -m pip install -r pipeline/requirements.txt
     fi
 
-    fetch_districts
     fetch_businesses
     filter_chains
     finalize_data

@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-76.51782,38.30226]},"properties":{"id":"node/4223115057","name":"Doctors On Sight","group":"personal_care","category":"shop=optician","tags":";optician;","rank":0,"z":12,"gz":10}}],"stats":[{"c":[2,6],"g":{"personal_care":1},"t":{"personal_care":{"optician":1}}}]}

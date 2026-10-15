@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.33291,38.55456]},"properties":{"id":"way/97517159","name":"Triangle Self Storage","group":"services","category":"shop=storage_rental","tags":";storage_rental;","rank":0,"z":12,"gz":12}}],"stats":[{"c":[15,11],"g":{"services":1},"t":{"services":{"storage_rental":1}}}]}

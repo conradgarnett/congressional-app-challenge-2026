@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.50431,38.99301]},"properties":{"id":"node/6565293257","name":"Sana Day Spa","group":"personal_care","category":"shop=beauty","tags":";beauty;spa;","rank":1,"z":11,"gz":11}}],"stats":[{"c":[11,15],"g":{"personal_care":1},"t":{"personal_care":{"beauty":1,"spa":1}}}]}

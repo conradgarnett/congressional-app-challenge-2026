@@ -14,7 +14,7 @@ import {
 import "maplibre-gl/dist/maplibre-gl.css";
 
 import { GROUPS, type GroupFilter } from "@/lib/groups";
-import type { BusinessCollection, DistrictCollection } from "@/types/business";
+import type { BusinessCollection, BusinessFeature } from "@/types/business";
 import type { LngLat } from "@/types/routing";
 import type { SavedSpot } from "@/hooks/useSaved";
 
@@ -83,12 +83,6 @@ export interface MapView {
   center: [number, number];
 }
 
-// Switching districts flies: zoom out, glide, zoom back in
-const DISTRICT_FLIGHT_MS = 2400;
-/** How far the flight zooms out; MapLibre's default is 1.42 */
-const DISTRICT_FLIGHT_CURVE = 1.6;
-const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
-
 /** What the map draws for directions; see hooks/useRouteSession.ts */
 export interface RoutingLayer {
   route: LngLat[] | null;
@@ -116,28 +110,28 @@ const GROUP_COLOR = [
 ] as unknown as ExpressionSpecification;
 
 interface Props {
-  districts: DistrictCollection;
-  /** Outlined in bold: the district at the center of the map */
-  highlightDistrictId: string | null;
-  /** Fly to this district when `key` changes; the first one is a jump, not a flight */
-  flyToDistrict: { id: string; key: number };
-  /** Every business loaded so far, from every district on screen */
+  /** Businesses in the tiles on screen (lib/geo/tiles.ts) */
   businesses: BusinessCollection;
+  /**
+   * Organic Maps zoom of the tiles being drawn. A pin shows once this
+   * reaches its `z` (its `gz` inside a category tab), so pins left over from
+   * a closer zoom thin out at once when zooming out.
+   */
+  tileZoom: number | null;
   group: GroupFilter;
   /** A type inside the group, e.g. "pizza"; see lib/tags.ts */
   tag: string | null;
-  /** The visitor's saved spots, from every district: always shown, ringed in marigold */
+  /** The visitor's saved spots, wherever they are: always shown, ringed in marigold */
   saved: SavedSpot[];
   /** Fit the map to all saved spots when this changes */
   fitSavedKey: number;
-  selectedId: string | null;
+  /** The open business; drawn from its own source, so it stays ringed when its tile is dropped */
+  selected: BusinessFeature | null;
   /** Fly here when it changes (a search pick); `key` lets the same spot re-trigger */
   focus: { lng: number; lat: number; key: number } | null;
   onSelect: (businessId: string | null) => void;
-  /** A saved spot was clicked; it may be in another district */
+  /** A saved spot was clicked; its tile may not be loaded */
   onSavedPick: (spotId: string) => void;
-  /** Double-clicking a district switches to it */
-  onDistrictPick: (districtId: string) => void;
   /** After every pan or zoom */
   onViewChange: (view: MapView) => void;
   routing: RoutingLayer;
@@ -151,39 +145,23 @@ function panelPadding(map: MapLibreMap) {
     : { top: 60, bottom: 60, left: 420, right: 60 };
 }
 
-function districtBounds(districts: DistrictCollection, districtId: string) {
-  const district = districts.features.find((feature) => feature.properties.id === districtId);
-  if (!district) return null;
-  const bounds = new LngLatBounds();
-  const polygons =
-    district.geometry.type === "Polygon" ? [district.geometry.coordinates] : district.geometry.coordinates;
-  for (const polygon of polygons) {
-    for (const [lng, lat] of polygon[0]) bounds.extend([lng, lat]);
-  }
-  return bounds;
-}
-
 export default function BusinessMap({
-  districts,
-  highlightDistrictId,
-  flyToDistrict,
   businesses,
+  tileZoom,
   group,
   tag,
   saved,
   fitSavedKey,
-  selectedId,
+  selected,
   focus,
   onSelect,
   onSavedPick,
-  onDistrictPick,
   onViewChange,
   routing,
 }: Props) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<MapLibreMap | null>(null);
   const [loaded, setLoaded] = useState(false);
-  const firstDistrictView = useRef(true);
   const savedRef = useRef(saved);
   useEffect(() => {
     savedRef.current = saved;
@@ -192,25 +170,22 @@ export default function BusinessMap({
   // Keep the latest callbacks without re-creating the map
   const onSelectRef = useRef(onSelect);
   const onSavedPickRef = useRef(onSavedPick);
-  const onDistrictPickRef = useRef(onDistrictPick);
   const onViewChangeRef = useRef(onViewChange);
   const routingRef = useRef(routing);
   useEffect(() => {
     onSelectRef.current = onSelect;
     onSavedPickRef.current = onSavedPick;
-    onDistrictPickRef.current = onDistrictPick;
     onViewChangeRef.current = onViewChange;
     routingRef.current = routing;
-  }, [onSelect, onSavedPick, onDistrictPick, onViewChange, routing]);
+  }, [onSelect, onSavedPick, onViewChange, routing]);
 
   useEffect(() => {
     if (!container.current) return;
     const instance = new MapLibreMap({
       container: container.current,
-      center: [-77.1, 39.05],
-      zoom: 10,
-      // Double-click picks a district instead; zoom stays on scroll and the +/- buttons
-      doubleClickZoom: false,
+      // Opens on Bethesda and Rockville, Maryland
+      center: [-77.12, 39.04],
+      zoom: 11,
     });
     instance.setStyle(BASE_STYLE_URL, { transformStyle: hideBaseMapBusinesses });
     instance.addControl(new NavigationControl({ showCompass: false }), "top-right");
@@ -219,33 +194,13 @@ export default function BusinessMap({
       for (const group of GROUPS) {
         instance.addImage(`pin-${group.id}`, pinImage(group.color), { pixelRatio: PIN_PIXEL_RATIO });
       }
-      instance.addSource("districts", { type: "geojson", data: districts });
       instance.addSource("businesses", { type: "geojson", data: EMPTY_FEATURES });
       instance.addSource("saved", { type: "geojson", data: EMPTY_FEATURES });
+      instance.addSource("selected", { type: "geojson", data: EMPTY_FEATURES });
       instance.addSource("route", { type: "geojson", data: EMPTY_FEATURES });
       instance.addSource("route-start", { type: "geojson", data: EMPTY_FEATURES });
       instance.addSource("user", { type: "geojson", data: EMPTY_FEATURES });
 
-      // Invisible fill: lets a double-click anywhere inside a district find it
-      instance.addLayer({
-        id: "district-area",
-        type: "fill",
-        source: "districts",
-        paint: { "fill-color": "#000000", "fill-opacity": 0 },
-      });
-      instance.addLayer({
-        id: "district-outline",
-        type: "line",
-        source: "districts",
-        paint: { "line-color": "#6b7280", "line-width": 1, "line-dasharray": [2, 2] },
-      });
-      instance.addLayer({
-        id: "district-selected",
-        type: "line",
-        source: "districts",
-        filter: ["==", ["get", "id"], ""],
-        paint: { "line-color": INK, "line-width": 3 },
-      });
       // Route under the pins so it never hides a business
       instance.addLayer({
         id: "route-casing",
@@ -261,10 +216,11 @@ export default function BusinessMap({
         layout: { "line-cap": "round", "line-join": "round" },
         paint: { "line-color": ROUTE_COLOR, "line-width": ["interpolate", ["linear"], ["zoom"], 10, 3.5, 16, 8] },
       });
-      // Like Google Maps: pins are symbols, so ones that would overlap are hidden.
-      // Zoomed out, wide padding leaves only a few; zooming in reveals more.
+      // Pins are symbols, so ones that would overlap are hidden, like Organic
+      // Maps' overlay tree. The tiles already hold only the pins meant for
+      // their zoom (export_site_data.py); padding clears what still collides.
       // When pins compete for space, the business with more information wins
-      // (`rank`, set in MapView).
+      // (`rank`, set by the pipeline).
       instance.addLayer({
         id: "businesses",
         type: "symbol",
@@ -287,8 +243,8 @@ export default function BusinessMap({
         paint: { "text-color": INK, "text-halo-color": "#ffffff", "text-halo-width": 1.5 },
       });
 
-      // Saved spots come from the saved list, not the district file, so they
-      // show in every district
+      // Saved spots come from the saved list, not the tiles, so they show
+      // wherever they are, loaded or not
       instance.addLayer({
         id: "saved-pins",
         type: "circle",
@@ -319,8 +275,7 @@ export default function BusinessMap({
       instance.addLayer({
         id: "business-selected",
         type: "circle",
-        source: "businesses",
-        filter: ["==", ["get", "id"], ""],
+        source: "selected",
         paint: {
           "circle-color": GROUP_COLOR,
           "circle-radius": 11,
@@ -364,11 +319,6 @@ export default function BusinessMap({
         else if (savedSpot) onSavedPickRef.current(savedSpot.properties.id as string);
         else onSelectRef.current(null);
       });
-      instance.on("dblclick", (event) => {
-        if (routingRef.current.picking) return;
-        const hit = instance.queryRenderedFeatures(event.point, { layers: ["district-area"] })[0];
-        if (hit) onDistrictPickRef.current(hit.properties.id as string);
-      });
       for (const layer of ["businesses", "saved-pins"]) {
         instance.on("mouseenter", layer, () => {
           if (!routingRef.current.picking) instance.getCanvas().style.cursor = "pointer";
@@ -398,46 +348,17 @@ export default function BusinessMap({
       instance.remove();
       map.current = null;
     };
-    // The district outlines never change, so the map is built once
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    if (!loaded || !map.current) return;
-    map.current.setFilter("district-selected", ["==", ["get", "id"], highlightDistrictId ?? ""]);
-  }, [loaded, highlightDistrictId]);
-
-  useEffect(() => {
-    if (!loaded || !map.current) return;
-    const bounds = districtBounds(districts, flyToDistrict.id);
-    const camera = bounds && map.current.cameraForBounds(bounds, { padding: 40 });
-    if (!camera) return;
-    if (firstDistrictView.current) {
-      // Opening the page: go straight there
-      firstDistrictView.current = false;
-      map.current.jumpTo(camera);
-      return;
-    }
-    // Not marked essential, so MapLibre skips the animation for people who
-    // ask their system for reduced motion
-    map.current.flyTo({
-      ...camera,
-      duration: DISTRICT_FLIGHT_MS,
-      curve: DISTRICT_FLIGHT_CURVE,
-      easing: easeInOutCubic,
-    });
-  }, [loaded, districts, flyToDistrict]);
-
-  // Declared after the district effect so a search pick's flyTo wins over fitBounds
-  useEffect(() => {
+    useEffect(() => {
     if (!loaded || !map.current || !focus) return;
     map.current.flyTo({ center: [focus.lng, focus.lat], zoom: Math.max(map.current.getZoom(), 16) });
   }, [loaded, focus]);
 
   useEffect(() => {
     if (!loaded || !map.current) return;
-    map.current.setFilter("business-selected", ["==", ["get", "id"], selectedId ?? ""]);
-  }, [loaded, selectedId]);
+    (map.current.getSource("selected") as GeoJSONSource).setData(selected ?? EMPTY_FEATURES);
+  }, [loaded, selected]);
 
   useEffect(() => {
     if (!loaded || !map.current) return;
@@ -447,14 +368,16 @@ export default function BusinessMap({
   useEffect(() => {
     if (!loaded || !map.current) return;
     const conditions: ExpressionSpecification[] = [];
-    if (group !== "all" && group !== "saved") conditions.push(["==", ["get", "group"], group]);
+    const inGroup = group !== "all" && group !== "saved";
+    if (inGroup) conditions.push(["==", ["get", "group"], group]);
+    if (tileZoom !== null) conditions.push(["<=", ["get", inGroup ? "gz" : "z"], tileZoom]);
     // tags look like ";pizza;italian;restaurant;", so ";pizza;" matches whole tags only
     if (tag) conditions.push(["in", `;${tag};`, ["get", "tags"]]);
     const filter = conditions.length === 0 ? null : (["all", ...conditions] as ExpressionSpecification);
     map.current.setFilter("businesses", filter);
-    // The Saved tab shows only saved spots, from every district
+    // The Saved tab shows only saved spots
     map.current.setLayoutProperty("businesses", "visibility", group === "saved" ? "none" : "visible");
-  }, [loaded, group, tag]);
+  }, [loaded, group, tag, tileZoom]);
 
   useEffect(() => {
     if (!loaded || !map.current) return;

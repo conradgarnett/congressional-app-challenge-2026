@@ -6,14 +6,13 @@ import type { GroupId } from "@/types/business";
 
 /**
  * Saved spots live in this browser's localStorage: no account, no server.
- * Each one keeps enough to list it and fly to it without loading its district.
+ * Each one keeps enough to list it and fly to it without loading its map tile.
  */
 export interface SavedSpot {
   id: string;
   name: string;
   group: GroupId;
   category: string;
-  district: string;
   lng: number;
   lat: number;
   city?: string;

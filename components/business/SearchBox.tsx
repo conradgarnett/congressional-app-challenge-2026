@@ -2,6 +2,7 @@
 
 import { useId, useMemo, useState } from "react";
 
+import type { Bounds } from "@/lib/geo/tiles";
 import { GROUPS, categoryLabel } from "@/lib/groups";
 import { loadSearchIndex, search, type SearchEntry, type TagMatch } from "@/lib/search";
 import { tagLabel } from "@/lib/tags";
@@ -9,7 +10,8 @@ import type { GroupId } from "@/types/business";
 import styles from "./SearchBox.module.css";
 
 interface Props {
-  currentDistrict: string;
+  /** The map's visible area: matches on screen rank first */
+  view: Bounds | null;
   onPick: (entry: SearchEntry) => void;
   /** "Show all pizza places": filter the map to a tag */
   onPickTag: (tag: string, group: GroupId) => void;
@@ -17,7 +19,7 @@ interface Props {
 
 type Option = { kind: "tag"; match: TagMatch } | { kind: "entry"; entry: SearchEntry };
 
-export default function SearchBox({ currentDistrict, onPick, onPickTag }: Props) {
+export default function SearchBox({ view, onPick, onPickTag }: Props) {
   const listId = useId();
   const [entries, setEntries] = useState<SearchEntry[] | null>(null);
   const [failed, setFailed] = useState(false);
@@ -26,8 +28,8 @@ export default function SearchBox({ currentDistrict, onPick, onPickTag }: Props)
   const [active, setActive] = useState(0);
 
   const results = useMemo(
-    () => (entries ? search(entries, query, currentDistrict) : null),
-    [entries, query, currentDistrict],
+    () => (entries ? search(entries, query, view) : null),
+    [entries, query, view],
   );
   const options = useMemo<Option[]>(
     () => [
@@ -141,8 +143,6 @@ export default function SearchBox({ currentDistrict, onPick, onPickTag }: Props)
                     <span className={styles.meta}>
                       {why ?? categoryLabel(option.entry.category)}
                       {option.entry.city && `, ${option.entry.city}`}
-                      {option.entry.district !== currentDistrict &&
-                        ` (${option.entry.district === "DC-AL" ? "DC" : option.entry.district})`}
                     </span>
                   </span>
                 )}

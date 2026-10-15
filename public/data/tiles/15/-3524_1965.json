@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.42519,39.60234]},"properties":{"id":"node/3158534161","name":"Market Basket","group":"groceries","category":"shop=convenience","tags":";convenience;","rank":0,"z":10,"gz":10}}],"stats":[{"c":[4,12],"g":{"groceries":1},"t":{"groceries":{"convenience":1}}}]}

@@ -1,20 +1,20 @@
-"""Pull businesses from OpenStreetMap for each congressional district.
+"""Pull businesses from OpenStreetMap for the DC area.
 
-Queries the Overpass API once per district (bounding box), caches the raw
-response in data/raw/osm/, then clips to the real district shape and tags
-each business with its district id.
+The area (REGION) is cut into square cells; the Overpass API is queried once
+per cell and each raw response is cached in data/raw/osm/cells/. To cover more
+ground, widen REGION and run again: cached cells are reused.
 
-Default: metro districts only. Pass --all for every DC/MD/VA district.
 Pass --refresh to ignore the cache and re-download.
+Pass --offline to use cached cells only (when the public servers are busy).
 
-Needs data/processed/districts.geojson (run districts.py first).
 Output: data/processed/businesses.geojson
-Run from repo root: .venv/bin/python pipeline/fetch/businesses.py [--all] [--refresh]
+Run from repo root: .venv/bin/python pipeline/fetch/businesses.py [--refresh | --offline]
 """
 
 from pathlib import Path
 import argparse
 import json
+import math
 import time
 
 import geopandas as gpd
@@ -22,9 +22,15 @@ import requests
 from tqdm import tqdm
 
 ROOT = Path(__file__).resolve().parents[2]
-CACHE = ROOT / "data" / "raw" / "osm"
-DISTRICTS = ROOT / "data" / "processed" / "districts.geojson"
+CACHE = ROOT / "data" / "raw" / "osm" / "cells"
 OUT = ROOT / "data" / "processed" / "businesses.geojson"
+
+# [west, south, east, north]: DC plus the inner Maryland and Virginia suburbs,
+# from Frederick and Columbia down to Fredericksburg's edge and out to Leesburg
+REGION = (-77.9, 38.3, -76.5, 39.7)
+# One Overpass query per cell. Small enough that a dense downtown cell
+# finishes well inside the server's time limit.
+CELL_DEGREES = 0.2
 
 # Public servers are shared and often busy; try each in turn
 OVERPASS_URLS = [
@@ -66,8 +72,23 @@ out center tags;
 """
 
 
-def fetch_district(district_id: str, bounds, refresh: bool) -> list[dict]:
-    path = CACHE / f"{district_id}.json"
+def cells() -> list[tuple[str, tuple[float, float, float, float]]]:
+    """(name, bounds) for every cell covering REGION"""
+    west, south, east, north = REGION
+    columns = math.ceil(round((east - west) / CELL_DEGREES, 6))
+    rows = math.ceil(round((north - south) / CELL_DEGREES, 6))
+    result = []
+    for row in range(rows):
+        for column in range(columns):
+            cell_west = round(west + column * CELL_DEGREES, 6)
+            cell_south = round(south + row * CELL_DEGREES, 6)
+            bounds = (cell_west, cell_south, min(cell_west + CELL_DEGREES, east), min(cell_south + CELL_DEGREES, north))
+            result.append((f"{cell_west:.2f}_{cell_south:.2f}", bounds))
+    return result
+
+
+def fetch_cell(cell: str, bounds, refresh: bool) -> list[dict]:
+    path = CACHE / f"{cell}.json"
     if path.exists() and not refresh:
         return json.loads(path.read_text())["elements"]
 
@@ -82,14 +103,14 @@ def fetch_district(district_id: str, bounds, refresh: bool) -> list[dict]:
                 elements = response.json()["elements"]
             except (requests.RequestException, ValueError, KeyError) as error:
                 errors.append(f"{url}: {error}")
-                print(f"  {district_id}: {url} failed ({error}), retrying", flush=True)
+                print(f"  {cell}: {url} failed ({error}), retrying", flush=True)
                 time.sleep(PAUSE_SECONDS * (attempt + 1))
                 continue
             CACHE.mkdir(parents=True, exist_ok=True)
             path.write_text(response.text)
             time.sleep(PAUSE_SECONDS)
             return elements
-    raise RuntimeError(f"All Overpass servers failed for {district_id}:\n" + "\n".join(errors))
+    raise RuntimeError(f"All Overpass servers failed for cell {cell}:\n" + "\n".join(errors))
 
 
 def category(tags: dict) -> str:
@@ -118,21 +139,28 @@ def to_record(element: dict) -> dict | None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--all", action="store_true", help="every district, not just metro")
-    parser.add_argument("--refresh", action="store_true", help="re-download cached districts")
+    parser.add_argument("--refresh", action="store_true", help="re-download cached cells")
+    parser.add_argument("--offline", action="store_true", help="use cached cells only")
     args = parser.parse_args()
 
-    districts = gpd.read_file(DISTRICTS)
-    if not args.all:
-        districts = districts[districts.metro]
-
     records = {}
-    for district in tqdm(districts.itertuples(), desc="Fetching businesses", unit="dist"):
-        elements = fetch_district(district.id, district.geometry.bounds, args.refresh)
+    missing = []
+    for cell, bounds in tqdm(cells(), desc="Fetching businesses", unit="cell"):
+        if args.offline and not (CACHE / f"{cell}.json").exists():
+            missing.append(cell)
+            continue
+        try:
+            elements = fetch_cell(cell, bounds, args.refresh)
+        except RuntimeError as error:
+            # Keep going: the cells that worked are cached, so the next run
+            # only asks for the missing ones
+            print(error, flush=True)
+            missing.append(cell)
+            continue
         for element in elements:
             record = to_record(element)
             if record:
-                records[record["osm_id"]] = record  # bounding boxes overlap; dedupe
+                records[record["osm_id"]] = record  # a way on a cell edge comes back twice; dedupe
 
     points = gpd.GeoDataFrame(
         list(records.values()),
@@ -141,15 +169,16 @@ def main() -> None:
         ),
         crs=4326,
     )
-    # Keep only businesses inside a selected district, and record which one
-    joined = gpd.sjoin(points, districts[["id", "geometry"]], predicate="within", how="inner")
-    joined = joined.rename(columns={"id": "district"}).drop(columns=["index_right", "lat", "lon"])
+    # A way's center can fall just outside the cells that returned it
+    west, south, east, north = REGION
+    points = points.cx[west:east, south:north].drop(columns=["lat", "lon"])
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    joined.to_file(OUT, driver="GeoJSON")
+    points.to_file(OUT, driver="GeoJSON")
 
-    print(f"Wrote {len(joined)} businesses to {OUT.relative_to(ROOT)}")
-    print(joined.district.value_counts().sort_index().to_string())
+    print(f"Wrote {len(points)} businesses to {OUT.relative_to(ROOT)}")
+    if missing:
+        print(f"{len(missing)} of {len(cells())} cells failed: {', '.join(missing)}. Run again later to fill them in.")
 
 
 if __name__ == "__main__":

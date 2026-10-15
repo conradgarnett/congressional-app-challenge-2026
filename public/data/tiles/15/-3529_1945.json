@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.52981,39.24966]},"properties":{"id":"node/6238158924","name":"Discount Cigarette Outlet","group":"groceries","category":"shop=convenience","tags":";convenience;","rank":0,"z":11,"gz":10}}],"stats":[{"c":[8,0],"g":{"groceries":1},"t":{"groceries":{"convenience":1}}}]}

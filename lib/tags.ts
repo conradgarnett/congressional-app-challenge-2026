@@ -1,4 +1,4 @@
-import type { Business, BusinessCollection, GroupId } from "@/types/business";
+import type { Business } from "@/types/business";
 
 /*
  * Tags are the finer types inside a category tab. They are built by the
@@ -60,13 +60,8 @@ export interface TagOption {
   feature: boolean;
 }
 
-/** Tags used by at least `minCount` businesses in the group, most common first. */
-export function tagOptions(collection: BusinessCollection | null, group: GroupId, minCount = 2): TagOption[] {
-  const counts = new Map<string, number>();
-  for (const { properties } of collection?.features ?? []) {
-    if (properties.group !== group) continue;
-    for (const tag of businessTags(properties)) counts.set(tag, (counts.get(tag) ?? 0) + 1);
-  }
+/** Chips for one group: tags used by at least `minCount` businesses in view, most common first. */
+export function tagOptions(counts: Map<string, number>, minCount = 2): TagOption[] {
   return [...counts]
     .filter(([, count]) => count >= minCount)
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))

@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-76.90109,38.93255]},"properties":{"id":"node/4544145090","name":"Landover Liquors","group":"groceries","category":"shop=alcohol","tags":";alcohol;","rank":0,"z":12,"gz":11}}],"stats":[{"c":[4,13],"g":{"groceries":1},"t":{"groceries":{"alcohol":1}}}]}

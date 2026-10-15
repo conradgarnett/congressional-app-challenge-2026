@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.23532,39.24163]},"properties":{"id":"node/6044822717","name":"Cedar Grove Convenience Store","group":"groceries","category":"shop=convenience","tags":";convenience;","rank":0,"z":10,"gz":10}}],"stats":[{"c":[7,4],"g":{"groceries":1},"t":{"groceries":{"convenience":1}}}]}

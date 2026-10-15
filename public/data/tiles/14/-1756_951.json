@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.13457,38.54062]},"properties":{"id":"way/360442342","name":"Pisgah General Store","group":"groceries","category":"shop=convenience","tags":";convenience;","rank":0,"z":10,"gz":10}}],"stats":[{"c":[12,12],"g":{"groceries":1},"t":{"groceries":{"convenience":1}}}]}

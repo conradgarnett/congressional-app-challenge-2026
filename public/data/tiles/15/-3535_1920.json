@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.66468,38.8299]},"properties":{"id":"node/795116754","name":"Trading Post","group":"groceries","category":"shop=convenience","tags":";convenience;","rank":0,"z":11,"gz":10}}],"stats":[{"c":[6,6],"g":{"groceries":1},"t":{"groceries":{"convenience":1}}}]}

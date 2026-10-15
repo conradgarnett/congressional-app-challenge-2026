@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.46318,39.28003]},"properties":{"id":"way/1113132656","name":"Thanksgiving Farms Unique Garden","group":"shopping","category":"shop=garden_centre","tags":";garden_centre;","rank":0,"z":11,"gz":11}}],"stats":[{"c":[9,12],"g":{"shopping":1},"t":{"shopping":{"garden_centre":1}}}]}

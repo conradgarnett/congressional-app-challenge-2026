@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-76.61338,38.83113]},"properties":{"id":"node/12637213017","name":"Bayside Bull","group":"food","category":"amenity=restaurant","tags":";restaurant;","rank":0,"z":12,"gz":10}}],"stats":[{"c":[7,15],"g":{"food":1},"t":{"food":{"restaurant":1}}}]}

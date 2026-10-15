@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.52517,38.37045]},"properties":{"id":"node/12699250155","name":"First Strike","group":"shopping","category":"shop=weapons","tags":";weapons;","rank":0,"z":12,"gz":10}}],"stats":[{"c":[7,5],"g":{"shopping":1},"t":{"shopping":{"weapons":1}}}]}

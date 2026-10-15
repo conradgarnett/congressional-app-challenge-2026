@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.04035,38.95116]},"properties":{"id":"way/70075650","name":"Rock Creek Park Box Office","group":"shopping","category":"shop=ticket","tags":";ticket;","rank":0,"z":11,"gz":11}}],"stats":[{"c":[12,8],"g":{"shopping":1},"t":{"shopping":{"ticket":1}}}]}

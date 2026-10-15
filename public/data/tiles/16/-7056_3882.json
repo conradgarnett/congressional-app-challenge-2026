@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.51884,39.18177]},"properties":{"id":"node/1640081868","name":"Fabbioli Cellars","group":"groceries","category":"shop=alcohol","tags":";alcohol;","rank":0,"z":10,"gz":10}}],"stats":[{"c":[1,1],"g":{"groceries":1},"t":{"groceries":{"alcohol":1}}}]}

@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-76.83751,39.09517]},"properties":{"id":"node/3078508608","name":"Manila Asian Foods","group":"groceries","category":"shop=supermarket","tags":";supermarket;asian;","rank":1,"z":11,"gz":11}}],"stats":[{"c":[0,15],"g":{"groceries":1},"t":{"groceries":{"supermarket":1,"asian":1}}}]}

@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.43315,39.52128]},"properties":{"id":"node/12040763109","name":"Mountaindale Convenience Store","group":"groceries","category":"shop=convenience","tags":";convenience;","rank":0,"z":10,"gz":10}}],"stats":[{"c":[14,0],"g":{"groceries":1},"t":{"groceries":{"convenience":1}}}]}

@@ -4,13 +4,12 @@ import styles from "./SavedPanel.module.css";
 
 interface Props {
   saved: SavedSpot[];
-  currentDistrict: string;
   onOpen: (spot: SavedSpot) => void;
   onRemove: (id: string) => void;
   onClose: () => void;
 }
 
-export default function SavedPanel({ saved, currentDistrict, onOpen, onRemove, onClose }: Props) {
+export default function SavedPanel({ saved, onOpen, onRemove, onClose }: Props) {
   return (
     <aside className={styles.panel} aria-label="Saved spots">
       <button type="button" className={styles.close} onClick={onClose} aria-label="Close saved spots">
@@ -28,10 +27,6 @@ export default function SavedPanel({ saved, currentDistrict, onOpen, onRemove, o
           <ul className={styles.list}>
             {saved.map((spot) => {
               const group = GROUPS.find((g) => g.id === spot.group);
-              const district = spot.district === "DC-AL" ? "DC" : spot.district;
-              const where = [spot.city, spot.district !== currentDistrict ? district : null]
-                .filter(Boolean)
-                .join(", ");
               return (
                 <li key={spot.id} className={styles.item}>
                   <button type="button" className={styles.open} onClick={() => onOpen(spot)}>
@@ -40,7 +35,7 @@ export default function SavedPanel({ saved, currentDistrict, onOpen, onRemove, o
                       <span className={styles.name}>{spot.name}</span>
                       <span className={styles.meta}>
                         {categoryLabel(spot.category)}
-                        {where && `, ${where}`}
+                        {spot.city && `, ${spot.city}`}
                       </span>
                     </span>
                   </button>

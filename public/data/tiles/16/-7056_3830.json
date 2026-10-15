@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.50924,38.74284]},"properties":{"id":"way/228239923","name":"SmartStop Self Storage","group":"services","category":"shop=storage_rental","tags":";storage_rental;","rank":0,"z":12,"gz":12}}],"stats":[{"c":[14,11],"g":{"services":1},"t":{"services":{"storage_rental":1}}}]}

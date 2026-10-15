@@ -1,4 +1,6 @@
-import type { FeatureCollection, MultiPolygon, Point, Polygon } from "geojson";
+import type { Feature, FeatureCollection, Point } from "geojson";
+
+import type { TileStat } from "@/lib/geo/tiles";
 
 export type GroupId = "food" | "groceries" | "personal_care" | "services" | "shopping";
 
@@ -21,21 +23,18 @@ export interface Business {
   menu?: string;
   /** From pipeline/load/tagging.py: ";pizza;italian;restaurant;takeout;" */
   tags?: string;
-  /** Added in the browser (MapView): which district file it came from */
-  district?: string;
-  /** Added in the browser (MapView): how much the map knows; wins pin space */
+  /** How much the map knows (website, hours, tags...); wins pin space */
   rank?: number;
+  /** Organic Maps zoom where the pin first shows among all businesses (the pipeline's scale index) */
+  z?: number;
+  /** Same, within its own group, for when a category tab is open */
+  gz?: number;
 }
 
-export interface District {
-  /** e.g. "MD-08", "DC-AL" */
-  id: string;
-  state: string;
-  number: string;
-  metro: boolean;
-  business_count: number;
-  has_data: boolean;
-}
-
+export type BusinessFeature = Feature<Point, Business>;
 export type BusinessCollection = FeatureCollection<Point, Business>;
-export type DistrictCollection = FeatureCollection<Polygon | MultiPolygon, District>;
+
+/** One tile file: GeoJSON plus, below the deepest zoom, counts of every business in it */
+export interface BusinessTile extends BusinessCollection {
+  stats?: TileStat[];
+}

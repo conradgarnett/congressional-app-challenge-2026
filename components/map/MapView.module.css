@@ -41,28 +41,6 @@
   font-size: 14px;
 }
 
-.picker {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  margin-left: auto;
-  font-size: 13px;
-}
-
-.picker span {
-  color: var(--stone);
-}
-
-.picker select {
-  padding: 7px 10px;
-  border: 1px solid var(--fog);
-  border-radius: 10px;
-  background: var(--background);
-  color: var(--ink);
-  font: inherit;
-  font-size: 14px;
-}
-
 .mapArea {
   position: relative;
   flex: 1;
@@ -84,63 +62,19 @@
   box-shadow: 0 4px 20px rgb(0 0 0 / 0.08);
 }
 
-.hint {
-  position: absolute;
-  bottom: 12px;
-  left: 50%;
-  z-index: 1;
-  transform: translateX(-50%);
-  padding: 4px 12px;
-  border-radius: 999px;
-  background: rgb(255 255 255 / 0.85);
-  color: #4a4a4a;
-  font-size: 12px;
-  pointer-events: none;
-  white-space: nowrap;
-}
-
 @media (max-width: 640px) {
-  /* Title and district picker share a row; search gets its own full row */
+  /* Title on top, search on its own full row below */
   .header {
     display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 10px 12px;
+    gap: 10px;
     padding: 10px 16px;
   }
 
-  .place {
-    grid-column: 1;
-  }
-
-  .picker {
-    grid-column: 2;
-    align-self: end;
-    margin-left: 0;
-  }
-
-  .picker span {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-  }
-
-  .picker select {
-    max-width: 120px;
-  }
-
   .header > :nth-child(2) {
-    grid-column: 1 / -1;
-    grid-row: 2;
     max-width: none;
   }
 
   .placeLine {
     font-size: 13px;
-  }
-
-  .hint {
-    display: none;
   }
 }

@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.75609,39.32188]},"properties":{"id":"node/6591464186","name":"Country Cafe","group":"food","category":"amenity=cafe","tags":";cafe;","rank":0,"z":12,"gz":12}}],"stats":[{"c":[7,8],"g":{"food":1},"t":{"food":{"cafe":1}}}]}

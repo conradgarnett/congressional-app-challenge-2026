@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-76.67975,38.3525]},"properties":{"id":"way/1418690441","name":"Zimmerman's","group":"groceries","category":"shop=farm","tags":";farm;","rank":0,"z":10,"gz":10}}],"stats":[{"c":[1,5],"g":{"groceries":2},"t":{"groceries":{"farm":1,"convenience":1}}}]}

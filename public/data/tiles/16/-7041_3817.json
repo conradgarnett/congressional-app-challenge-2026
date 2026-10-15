@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.34635,38.62555]},"properties":{"id":"node/9555191260","name":"Nail Art","group":"personal_care","category":"shop=beauty","tags":";beauty;nails;","rank":1,"z":11,"gz":11}}],"stats":[{"c":[12,0],"g":{"personal_care":1},"t":{"personal_care":{"beauty":1,"nails":1}}}]}

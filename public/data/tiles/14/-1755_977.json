@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.11482,39.40983]},"properties":{"id":"way/131806639","name":"Club House","group":"food","category":"amenity=cafe","tags":";cafe;","rank":0,"z":10,"gz":10}}],"stats":[{"c":[3,3],"g":{"food":1},"t":{"food":{"cafe":1}}}]}

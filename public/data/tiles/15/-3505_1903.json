@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.01047,38.54304]},"properties":{"id":"way/682011024","name":"Hawthorne","group":"food","category":"amenity=restaurant","tags":";restaurant;","rank":0,"z":10,"gz":10}}],"stats":[{"c":[2,11],"g":{"food":1},"t":{"food":{"restaurant":1}}}]}
