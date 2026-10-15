@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.4372,39.04876]},"properties":{"id":"way/1090642723","name":"Exclusive Automotive Group","group":"shopping","category":"shop=car","tags":";car;","rank":154,"icon":"car_shop-m","priority":1600,"z":12,"gz":12}}],"stats":[{"c":[7,7],"g":{"shopping":1},"t":{"shopping":{"car":1}}}]}

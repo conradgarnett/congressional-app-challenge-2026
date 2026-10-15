@@ -1,1 +1,1 @@
-{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.76673,39.62895]},"properties":{"id":"way/144005719","name":"Hagerstown Ford","group":"shopping","category":"shop=car","tags":";car;","rank":0,"z":13,"gz":13}}]}
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.76673,39.62895]},"properties":{"id":"way/144005719","name":"Hagerstown Ford","group":"shopping","category":"shop=car","tags":";car;","rank":219,"icon":"car_shop-m","priority":1600,"z":13,"gz":13}}]}

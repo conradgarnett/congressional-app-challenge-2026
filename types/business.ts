@@ -23,8 +23,12 @@ export interface Business {
   menu?: string;
   /** From pipeline/load/tagging.py: ";pizza;italian;restaurant;takeout;" */
   tags?: string;
-  /** How much the map knows (website, hours, tags...); wins pin space */
+  /** 0-255, fixed random per business: breaks ties in pin space without favoring shops that are online */
   rank?: number;
+  /** Organic Maps' icon for the type, e.g. "bakery-m" (public/map/sprite.json) */
+  icon?: string;
+  /** Organic Maps' drules priority for the type: higher wins pin space */
+  priority?: number;
   /** Organic Maps zoom where the pin first shows among all businesses (the pipeline's scale index) */
   z?: number;
   /** Same, within its own group, for when a category tab is open */

@@ -1,1 +1,1 @@
-{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.42515,38.90353]},"properties":{"id":"node/3088873629","name":"Ferguson","group":"services","category":"craft=hvac","tags":";hvac;","rank":0,"z":13,"gz":12}}]}
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.42515,38.90353]},"properties":{"id":"node/3088873629","name":"Ferguson","group":"services","category":"craft=hvac","tags":";hvac;","rank":16,"icon":"plumber-m","priority":500,"z":13,"gz":12}}]}

@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.52394,38.80393]},"properties":{"id":"node/2203619865","name":"Jerry's Subs & Pizza","group":"food","category":"amenity=fast_food","cuisine":"sandwich","tags":";sandwich;fast_food;pizza;","rank":115,"icon":"fastfood-m","priority":4050,"z":12,"gz":12}}]}

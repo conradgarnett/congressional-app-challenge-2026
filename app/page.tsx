@@ -1,5 +1,5 @@
-import MapView from "@/components/map/MapView";
+import LocalMap from "@/components/app/LocalMap";
 
 export default function Home() {
-  return <MapView />;
+  return <LocalMap />;
 }

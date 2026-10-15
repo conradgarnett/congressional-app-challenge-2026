@@ -1,1 +1,1 @@
-{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.30013,39.36281]},"properties":{"id":"node/7089482347","name":"club house","group":"food","category":"amenity=cafe","tags":";cafe;","rank":0,"z":10,"gz":10}}]}
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.30013,39.36281]},"properties":{"id":"node/7089482347","name":"club house","group":"food","category":"amenity=cafe","tags":";cafe;","rank":204,"icon":"cafe-m","priority":4100,"z":10,"gz":10}}]}

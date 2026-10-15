@@ -180,23 +180,23 @@ fetch_businesses() {
 }
 
 # ------------------------------------------------------------
-# Filter chains
+# Keep small, independent businesses
 # ------------------------------------------------------------
 
-filter_chains() {
+find_independent() {
     run_step 2 3 \
-        "Filtering big chains" \
-        .venv/bin/python pipeline/filter/chains/filter_chains.py
+        "Finding small, independent businesses" \
+        .venv/bin/python pipeline/filter/independent.py
 }
 
 # ------------------------------------------------------------
-# Assign groups + export site data
+# Map style + export site data
 # ------------------------------------------------------------
 
 finalize_data() {
     echo -e "\n${CYAN}${BOLD}[3/3] Finalizing site data...${NC}"
 
-    .venv/bin/python pipeline/filter/groups/assign_groups.py
+    .venv/bin/python pipeline/style/build_style.py
     .venv/bin/python pipeline/load/export_site_data.py
 
     success "Site data generated."
@@ -285,7 +285,7 @@ data_pipeline() {
     fi
 
     fetch_businesses
-    filter_chains
+    find_independent
     finalize_data
 
     echo

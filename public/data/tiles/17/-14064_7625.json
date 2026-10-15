@@ -1,1 +1,1 @@
-{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.2556,38.58703]},"properties":{"id":"way/1066261395","name":"Breakwater Store","group":"food","category":"amenity=cafe","tags":";cafe;","rank":0,"z":10,"gz":10}}]}
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.2556,38.58703]},"properties":{"id":"way/1066261395","name":"Breakwater Store","group":"food","category":"amenity=cafe","tags":";cafe;","rank":160,"icon":"cafe-m","priority":4100,"z":10,"gz":10}}]}

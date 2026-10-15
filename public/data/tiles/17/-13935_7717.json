@@ -1,1 +1,1 @@
-{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-76.54211,38.98302]},"properties":{"id":"node/10584673718","name":"The Frame Shoppe","group":"shopping","category":"shop=frame","tags":";frame;","rank":0,"z":13,"gz":13}}]}
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-76.54211,38.98302]},"properties":{"id":"node/10584673718","name":"The Frame Shoppe","group":"shopping","category":"shop=frame","tags":";frame;","rank":120,"icon":"shop-m","priority":470,"z":13,"gz":13}}]}

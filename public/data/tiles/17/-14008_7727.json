@@ -1,1 +1,1 @@
-{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-76.94453,39.02466]},"properties":{"id":"node/6968393630","name":"Star Cafe","group":"food","category":"amenity=cafe","tags":";cafe;","rank":0,"z":12,"gz":12}}]}
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-76.94453,39.02466]},"properties":{"id":"node/6968393630","name":"Star Cafe","group":"food","category":"amenity=cafe","tags":";cafe;","rank":174,"icon":"cafe-m","priority":4100,"z":11,"gz":11}}]}

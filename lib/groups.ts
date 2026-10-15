@@ -6,7 +6,7 @@ export interface Group {
   color: string;
 }
 
-/** The map's category tabs. Groups are assigned in pipeline/filter/groups/assign_groups.py. */
+/** The map's groups. Each business gets one in pipeline/filter/independent.py (GROUPS there). */
 export const GROUPS: Group[] = [
   { id: "food", label: "Food & drink", color: "#d64933" },
   { id: "groceries", label: "Groceries & essentials", color: "#3e8e41" },

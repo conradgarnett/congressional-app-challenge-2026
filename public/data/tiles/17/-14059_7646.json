@@ -1,1 +1,1 @@
-{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.22553,38.68007]},"properties":{"id":"way/707865004","name":"Harbin Marine","group":"shopping","category":"shop=boat","tags":";boat;","rank":0,"z":13,"gz":11}}]}
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.22553,38.68007]},"properties":{"id":"way/707865004","name":"Harbin Marine","group":"shopping","category":"shop=boat","tags":";boat;","rank":57,"icon":"shop-m","priority":470,"z":13,"gz":11}}]}

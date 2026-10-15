@@ -4,9 +4,9 @@
 
 Congressional App Challenge 2026 entry (our district: Maryland's 8th, Rep.
 Jamie Raskin). An interactive map of the DC area that finds small,
-independent businesses. Businesses load for whatever part of the map is on
-screen, like Google Maps; the app no longer uses district lines at all
-(removed 2026-10-15).
+independent businesses, drawn with Organic Maps' own map rules. Businesses
+load for whatever part of the map is on screen; the app no longer uses
+district lines at all (removed 2026-10-15). Built for laptops first.
 
 Team project. Conrad does most of the build. Teammates edit `ideas.txt` and
 `prompt.md` directly on GitHub, so **pull before editing and never overwrite
@@ -27,139 +27,194 @@ change makes a rule or fact above the Log wrong, fix that section too.
 
 ## What counts as a small business
 
-1. **Drop big chains:** anything with an OSM `brand` or `brand:wikidata` tag,
-   plus the Name Suggestion Index chain list.
-1b. **Our own location count** (`pipeline/filter/chains/repeat_locations.py`):
-   a brand name seen 3+ times across the pulled area is a chain
-   (town removed: "Kusshi Bethesda" counts as Kusshi), and so are 3+
-   businesses sharing a website that contains their name. Names made only
-   of generic words ("China King", "Food Mart") need the website match:
-   they are usually unrelated family businesses. Catches regional chains the
-   lists miss: Kusshi, Moby Dick House of Kabob, Lebanese Taverna, Matchbox.
-2. **Two or fewer locations in the whole US**, not just in our area. A
-   national chain can have only one store inside an area; counting by name in
-   Montgomery County alone let 419 chain stores through (Costco, KFC, Ace
-   Hardware...).
+The team's rule: **two or fewer locations in the whole US**; chains are
+dropped. A national chain can have one store in our area, so counting
+locations here is not enough on its own. Better to wrongly keep a
+three-location business than to wrongly drop a family shop.
 
-**Deciding whether two places are the same business:**
+**The algorithm** (`pipeline/filter/independent.py`, rebuilt 2026-10-15):
 
-- **Strong (any one = same business):** same website (the full site, not a
-  shared host like facebook.com, Squarespace, Toast, Yelp, linktr.ee), same
-  email, same Instagram/Facebook handle, same OSM `operator`.
-- **Phone is one-way.** Same phone = same business. Different phones prove
-  nothing, because each location has its own line.
-- **Unclear cases only:** compare menus and logos. Both need scraping. Site
-  builders give unrelated shops the same template logo, so a logo match alone
-  never drops a business.
-- **Never enough alone:** name, category, cuisine, opening hours.
-  ("Golden Dragon" exists in 50 towns, all unrelated.)
-- **No strong signal = different businesses.** Better to wrongly keep a
-  three-location business than to wrongly drop a family shop.
+1. **Identity.** Each business gets its name (lowercased, store numbers and
+   town names removed: "Kusshi Bethesda" reads as Kusshi), website domain
+   (on shared hosts like facebook.com, Toast or Yelp, the page path instead;
+   a builder subdomain is the business's own), phone, email, Instagram and
+   Facebook handle (Facebook `profile.php?id=` uses the id), operator and
+   brand Wikidata id.
+2. **Graph.** Two businesses are linked when they share a strong identity.
+   A shared website or phone also needs a word in common between the names
+   (malls and office switchboards). Same name links only when the name is
+   **distinctive**: one of its words is used mostly by that exact name
+   (Kusshi, Pupatella, Moby Dick), measured from all 28,854 names. "Golden",
+   "Dragon", "China", "King" appear in dozens of unrelated names, so Golden
+   Dragons and China Kings stay separate. Name links also need the same map
+   group, and no two different websites unless every website carries the
+   name's own word (mobydickhouse.com and mobydickkabob.com are one brand;
+   rasa.co and rasagrill.com are not).
+3. **Entities and locations.** Each connected part of the graph is one
+   business. Its locations are members more than 60 m apart (a shop mapped
+   as a point and as a building is one location).
+4. **Chain when** 3+ locations here; or any member has a brand Wikidata id;
+   or the name is a Name Suggestion Index brand sold in the US in the same
+   map group (an auto body "Body Shop" isn't The Body Shop); or a brand tag
+   plus 2 locations.
+5. **Run by an institution** = not independent: a `.edu`, `.gov` or `.mil`
+   website, a campus-dining or bookstore contractor's site (Sodexo,
+   dineoncampus, Barnes & Noble College...), or an operator tag naming a
+   university, college, Smithsonian, county, city or such a contractor.
+   Catches campus dining, Smithsonian cafes, college bookstores, and the
+   state and county liquor stores (Virginia ABC, Montgomery County ABS).
+6. **Chain store locator** = chain, even with 1-2 stores here: a website
+   with a store number or state/city folders after `/locations/` or
+   `/stores/` (`thecapitalgrille.com/locations/dc/washington/.../8003`).
+   Catches national chains NSI doesn't list (Capital Grille, Eddie V's,
+   Elephant & Castle, CPR Cell Phone Repair, 7-Eleven franchisees).
+7. Unnamed places, non-businesses (vacant, malls, vending machines, ATMs,
+   lockers), vape shops and smoke shops are dropped too.
 
-## How the map shows businesses
+**No AI model decides this** (Conrad asked about a small NVIDIA model,
+2026-10-15). A model would guess from a name and category, can't explain
+its choice, may change between runs, and a hosted one needs an API key.
+Missed cases are fixed with rules on data OSM already has. If a model is
+ever added, only offline in the pipeline, for unsure cases, with a person
+approving its changes.
 
-Business pins are drawn the way Organic Maps draws its map (their renderer,
-`libs/drape_frontend` in organicmaps/organicmaps; read 2026-10-15):
+Every decision and its reason is in `data/processed/business_decisions.csv`.
+Known weak spot: generic-looking names with no website (four "Great Wall"
+restaurants without websites count as one chain).
 
-- **Same tiles as Organic Maps.** Their Mercator (x = longitude, y =
-  latitude stretched, both -180..180) and their tile keys: a tile at zoom z
-  is a square 360 / 2^(z-1) Mercator degrees wide, numbered from 0,0 with y
-  going north (`tile_key.cpp`, `tile_utils.cpp`). Their zoom is MapLibre's
-  plus one. Zoom 17 is the deepest data zoom: closer views reuse zoom-17
-  tiles. We export zooms 10 to 17 (pins start at MapLibre zoom 9).
-- **Each zoom holds only what it draws** (their scale index). The pipeline
-  gives every business `z`, the first zoom where it is the best-described
-  business in its cell (16 cells per tile side, about 32 px), and `gz`, the
-  same within its own group, so a category tab zoomed out still has
-  well-spread pins. A zoom-z tile holds businesses with `z` or `gz` up to z;
-  zoom-17 tiles hold every business. "Best-described" is `rank`: cuisine and
-  type tags, website, hours, phone, menu.
-- **Screen coverage** (`ResolveTileKeys`, `CalcTilesCoverage`): on every pan
-  or zoom the site works out the tiles covering the screen plus 75 px, at
-  the current zoom (`lib/geo/tiles.ts`), fetches the missing ones, cancels
-  requests for tiles that left the screen before arriving, and drops tiles
-  that left. Tiles of the previous zoom stay on screen until every new tile
-  has arrived, so zooming never blinks empty (`MapView.tsx`).
-- **Collisions** are MapLibre symbols that hide when they would overlap,
-  best `rank` first, like Organic Maps' overlay tree (`BusinessMap.tsx`).
-  Names appear beside pins from MapLibre zoom 15. Below zoom 9 no business
-  pins show, only saved spots. Saved spots are always visible.
-- **Counts follow the view and count every business, not just the pins
-  shown.** Tiles below zoom 17 carry counts per group and per tag for 16 x 16
-  cells; the site adds the cells on screen (cells cut by the screen edge
-  count by the share on screen). Zoom-17 tiles are counted business by
-  business. Checked against exact counts on 160 random views: median error
-  under 1%; the worst cases (up to about 30%) are small counts where a
-  cluster sits on the screen edge.
-- The header names the town most pins near the middle list as their city
-  ("Bethesda"; "Washington, DC area" when zoomed out or no town is known).
-  Outside the covered rectangle the map says "Not mapped yet". An open
-  business panel stays open when its tile is dropped. Double-click zooms in.
+## How the map is drawn
+
+**Like Organic Maps, from their own rules** (rebuilt 2026-10-15). Their app
+draws from `.mwm` files with its own C++ engine, which can't run in a
+browser. So the site keeps their *rules* and applies them to OpenFreeMap's
+vector tiles:
+
+- **Drawing rules from the app itself.** `pipeline/style/drules.py` decodes
+  `assets/drules_default.bin` from the Organic Maps APK (format "OMDR" v1;
+  a port of `libs/indexer/drules_format.cpp`). It holds, for 1,177 feature
+  types at every zoom, line widths and colors, area fills, icons, label
+  sizes and priorities. Checked against their own text dump
+  (`data/drules_default.txt`): the values match. Stored alpha is
+  transparency (opacity = 255 - alpha), and a resolved color of 0 means
+  "no outline".
+- **Style.** `pipeline/style/build_style.py` maps OpenMapTiles classes to
+  Organic Maps types (`transportation` class `primary` + bridge →
+  `highway-primary-bridge`, landcover `wood` → `landuse-forest`...) and
+  writes `public/map/style.json`: 248 layers, drawn in their priority order
+  (geometry low first, labels and icons high last). Their zoom z is
+  MapLibre zoom z-1. Background `#E3E1D2` is their land color. Base-map
+  points of interest are landmarks only (schools, parks, churches,
+  libraries, stations...), with their icons; shops and restaurants from the
+  base map are left out so no chain shows.
+- **Icons.** Their icon atlas (`symbols.png` + `symbols.xml`, 860 icons) is
+  converted to a MapLibre sprite, 1x and 2x (`public/map/sprite*`).
+- **Business pins** use their icon for each OSM type (`public/map/types.json`;
+  95% exact, the rest use their generic shop/craft icon) and their overlay
+  order: drules priority first (a restaurant beats a hairdresser, as in
+  their app), then our `rank` as their "rank" byte: a fixed random number
+  per business (from its OSM id), not how much is online. See "Fair ranking"
+  (`CalculateOverlayPriority`). Overlapping pins hide, best first. Names
+  show under pins from MapLibre zoom 15.
+- **Highlights** are their search-result pins: hovering a row in the list,
+  or opening a place, raises it on the map. Saved places use their bookmark
+  glyphs on a bookmark-red dot. Routes use their route blue `#0087ff` with
+  outline `#055fcd` (purple for bike, dark blue for walking) and their
+  start/finish markers.
+- **Licence.** Organic Maps code, styles and icons are Apache-2.0; the
+  compiled `.bin` is an Organic Maps Data File. The map credits "Map data ©
+  OpenStreetMap and Organic Maps" with links (in the style's attribution).
+
+**Business tiles: the same tiles as Organic Maps.**
+
+- Their Mercator (x = longitude, y = latitude stretched, both -180..180) and
+  tile keys: a tile at zoom z is 360 / 2^(z-1) Mercator degrees wide,
+  numbered from 0,0 with y going north (`tile_key.cpp`, `tile_utils.cpp`).
+  Zoom 17 is the deepest data zoom. We export zooms 10 to 17.
+- **Each zoom holds only what it draws** (their scale index): every business
+  gets `z`, the first zoom where it wins its cell (16 cells per tile side,
+  about 32 px) in the overlay order above, and `gz`, the same within its
+  own group. Zoom-17 tiles hold every business.
+- **Screen coverage** (`ResolveTileKeys`): on every pan or zoom
+  `hooks/useTiles.ts` fetches the tiles covering the screen plus 75 px,
+  cancels ones that left before arriving, drops ones that left, and keeps
+  the previous zoom until every new tile has arrived.
+- **Counts count every business, not just pins**: tiles below zoom 17 carry
+  counts per group and tag for 16 x 16 cells, added by the share on screen;
+  zoom-17 tiles are counted one by one. Median error under 1% on 160 random
+  views; worst about 30% on small counts at the screen edge.
+
+**Fair ranking** (Conrad, 2026-10-15). The app exists to help underserved
+businesses, and nearly half of ours (48%) have no website, phone or hours
+on OSM. Ranking by how well described a place is hid exactly them: at the
+widest zoom they got only 32% of the pins. Now the tiebreak is a fixed
+random number per business, and they get 48%, their real share. Never cut
+or rank down a business for having little online.
 
 ## Map categories
 
-Every small business sits in one of five groups, and the map has a tab for
-each: **Food & drink, Groceries & essentials, Personal care, Services,
-Shopping.** Vape shops are left out entirely (team decision for the school
-demo); plain tobacco and cannabis shops stay. The map opens on **all groups**: Conrad decided against making
-food the default view. Groups are assigned in
-`pipeline/filter/groups/assign_groups.py`; any shop type not listed there
-falls into Shopping, and any trade (`craft=*`) into Services.
+Every small business sits in one of five groups: **Food & drink, Groceries
+& essentials, Personal care, Services, Shopping.** Vape shops are left out
+entirely (team decision for the school demo), and since 2026-10-15 so are smoke shops: every `shop=tobacco` except
+cigar shops and tobacconists (most "tobacco" shops here are vape and smoke
+shops). Cannabis dispensaries stay. The map opens on **Everything**: Conrad decided against making
+food the default view. Groups are assigned by `GROUPS` in
+`pipeline/filter/independent.py`; any other shop is Shopping, any other
+trade (`craft=*`) Services.
 
-Inside a tab, a second row of **type chips** narrows further: OSM cuisines
-(Italian, Pizza, Chinese...) and OSM types (Cafe, Bakery, Hairdresser...),
-most common first, with counts, then a **Features** section (Takeout,
-Outdoor seating, Wheelchair accessible, Wi-Fi, Vegan, Halal...). A business
-can carry several tags: a pizza restaurant is both "Pizza" and "Restaurant".
-Tags are built by `pipeline/load/tagging.py` from three OSM-only sources:
-cuisine and type, words in the name ("Taqueria" means Mexican; rules apply
-only inside their own map group), and OSM detail tags. Chosen instead of an
-AI model: no API key, instant, works offline, and can't invent businesses.
+Inside a group, **type chips** narrow further: OSM cuisines and types
+(Pizza, Cafe, Hairdresser...), most common in view first, then features
+(Takeout, Outdoor seating, Wheelchair accessible...) with a dashed edge.
+Tags are built by `pipeline/load/tagging.py` from OSM cuisine and type,
+words in the name ("Taqueria" means Mexican), and OSM detail tags.
 
-**Search puts tags first.** "pizza", "pizza place" and "chinese food" name a
-tag (filler words like food/place/shop are dropped; a synonym list maps
-coffee→cafe, haircut→hairdresser, take out→takeout...). Businesses with that
-tag rank above name matches, and the first result is "Pizza: show all 43 on
-the map", which opens the tab and chip.
+**Search puts tags first.** "pizza" or "chinese food" names a tag; the first
+result is "Show every pizza place", which opens the group and chip. Then
+names, then streets and towns; matches on screen first. "/" focuses search.
 
 **Not built yet, waiting on outside data** (team decision 2026-10-06):
-average price, reviews, customer traffic. OSM has no price tags at all in
-our data; reviews and per-store traffic need a service such as Google
-Places, Yelp, Foursquare or BestTime.
+average price, reviews, customer traffic. OSM has no price tags in our
+data; reviews and traffic need a service such as Google Places or Yelp.
 
 ## Look and feel
 
-Minimal and monochrome (Conrad turned down the earlier green, 2026-10-13).
-Set up with Anthropic's `frontend-design` skill (installed 2026-10-12):
+**Desktop first** (Conrad, 2026-10-15: "we are not testing the app on a
+phone"). Rebuilt from scratch with the `frontend-design` skill; nothing kept
+from the earlier designs.
 
-- **Color only means something:** the five category pin colors
-  (`lib/groups.ts`) and marigold `#f0b33c` for saved spots. Everything else
-  is black, white and grays (`app/globals.css`): ink `#171717`, buttons
-  `--action` black with white text, borders `#ebebeb`, muted text `#6b6b6b`.
-  Dark mode flips them.
-- **Base map:** OpenFreeMap "Positron", a gray style with no shop icons, so
-  the pins are the only color on the map.
-- **Type:** Atkinson Hyperlegible Next everywhere (made by the Braille
-  Institute for low-vision readers). Bricolage Grotesque only for the
-  header's place name, the one loud element.
+- **Layout:** a fixed 400 px white sidebar on the left (place name and
+  count, search, groups, chips, then the list of places on the map, a
+  place's details, directions, or saved places); the map fills the rest.
+  Below 760 px wide the map goes on top and the panel below; real mobile
+  design comes later.
+- **List and map are one thing:** the list shows the places drawn on the
+  map, in the map's own order (up to 60). Hovering a row raises that place
+  on the map; clicking opens it and flies there.
+- **Color:** the map carries the color (Organic Maps' palette). The
+  interface is white with ink `#22313A`, muted `#5D6B73`, hairlines
+  `#D9DDD8`, and one accent, `#1E96F0`, which is Organic Maps' own selection
+  color from the drules (`app/globals.css`).
+- **Type:** Public Sans only, the US government's civic typeface (USWDS).
+- **Dark mode:** Light / Dark / Auto switch top right of the sidebar
+  (`hooks/useTheme.ts`; Auto follows the computer, the choice is kept in
+  the browser; a tiny script in `app/layout.tsx` sets it before the first
+  paint). The map switches to Organic Maps' own dark palette and dark icons
+  (`public/map/style-dark.json`, `sprite-dark*`, from the same drules), and
+  the interface to dark tokens in `app/globals.css`.
+- **Pins on discs:** Organic Maps draws its icons bare, which got lost on
+  their tan land (cafe icons especially). Each business icon is drawn onto a
+  white disc with a thin ring (dark disc in dark mode), made in the browser
+  from the sprite icon the first time it's needed
+  (`setMissingStyleImageResolver` in `OrganicMap.tsx`).
 - **Words:** plain, sentence case, from the visitor's side. No ALL-CAPS
-  labels, no "A · B · C" strings; use commas. Errors say what happened and
-  what to do.
-- **Panels:** white sheets, hairline border, light shadow; a small colored
-  dot by the type line shows the category. Business names appear beside
-  pins from zoom 15 in.
+  labels, no "A · B · C" strings. Errors say what happened and what to do.
 
 ## Saved spots
 
-The heart **Save** button in a business panel keeps it in the **Saved** tab
-(`hooks/useSaved.ts`). Saved spots are stored in the browser's
-localStorage: no account, no server, so they stay on that device only.
-Each keeps its name, type, city and position. They are drawn as their
-own map layer, so they show with a marigold ring **anywhere on the map**,
-even where business tiles haven't loaded. The Saved tab hides other pins,
-zooms out to fit every saved spot, and lists them; clicking one flies
-there. Saved is a toggle: pressing it again (or the list's ×)
-returns to the previous tab.
+**Save** in a place's details keeps it in **Saved** (`hooks/useSaved.ts`),
+stored in the browser's localStorage: no account, so they stay on that
+computer. Saved places are always on the map as Organic Maps bookmarks,
+even where tiles haven't loaded. Saved lists them and fits the map to them;
+pressing Saved again returns to the previous group.
 
 ## Constraints that will break things if ignored
 
@@ -171,9 +226,17 @@ itself (Mercator, tile size, MapLibre zoom + 1) is in both the export and
 `lib/geo/tiles.ts`: change one, change the other.
 
 **Only filtered businesses reach the site.** The export reads
-`small_businesses.geojson` (after the chain filter and `assign_groups.py`)
-and stops with an error if any business in it is not marked "not a chain"
-in `businesses_layer1.geojson` or has no group. Rerun the filters first.
+`small_businesses.geojson` and stops with an error if any business in it is
+not marked independent in `business_decisions.csv` or has no group. Rerun
+`pipeline/filter/independent.py` first.
+
+**The map style is generated, not hand-written.** Change
+`pipeline/style/build_style.py` (mappings, halo width, landmark list) and
+rerun it; don't edit `public/map/style.json`. It needs the drules and icons
+from the APK once: `build_style.py --apk path/to/app.organicmaps_*.apk`
+copies them into `data/raw/organicmaps/` (git-ignored). Without them it
+keeps the committed style. MapLibre needs an absolute sprite URL, so
+`OrganicMap.tsx` adds the site's origin when it loads the style.
 
 **Search never calls Overpass live.** Every business name already comes
 from Overpass through the pipeline; the search bar searches
@@ -210,24 +273,24 @@ publicapis.io/open-street-map-api):
   A few hundred moderate queries a day on public servers.
 - **Address search → Nominatim.** Max 1 request per second, descriptive
   User-Agent, no bulk geocoding. OK for a search box on the site.
-- **Map display → MapLibre with OpenFreeMap vector tiles** ("Positron" style; free, no key,
-  OSM data). Not OSM's standard image tiles: those have every shop and gas
-  station drawn in, chains included, and image tiles can't hide single
-  icons. `BusinessMap.tsx` hides every base-map point of interest except
-  landmarks (parks, schools, hospitals, churches, libraries, transit...).
-  The style's own highway-shield console warnings are harmless.
+- **Map display → MapLibre with OpenFreeMap vector tiles** (free, no key,
+  OSM data), styled with Organic Maps' rules (see "How the map is drawn").
+  Not OSM's standard image tiles: those have every shop and gas station
+  drawn in, chains included.
 - **"Add a missing business" → editing API v0.6** at api.openstreetmap.org.
   Needs OAuth 2.0 (`write_api` scope, `Authorization: Bearer <token>`).
   Never use it for bulk reads: its bounding-box size is capped.
-- **Attribution is required** by the ODbL licence: show
-  "© OpenStreetMap contributors" on the map.
+- **Attribution is required**: "Map data © OpenStreetMap and Organic Maps"
+  with links (ODbL and the Organic Maps data licence). It is in the style.
 
 **MapLibre 6 loads its worker from a separate file.** Next.js bundles
 MapLibre's main code into a chunk, so the worker's default relative URL
 breaks ("Worker failed to load") and the map shows tiles but no pins or
 outlines. `scripts/copy-maplibre-worker.mjs` copies the worker into
 `public/maplibre/` on `npm install`, `npm run dev` and `npm run build`, and
-`BusinessMap.tsx` calls `setWorkerUrl` on it. MapLibre 6 also has **no
+`OrganicMap.tsx` calls `setWorkerUrl` on it. Its CSS also sets the map
+container to `position: relative`, so `OrganicMap.tsx` sizes it inline or
+the map is zero pixels tall. MapLibre 6 also has **no
 default export**: use named imports.
 
 **Next.js 16 is newer than most training data.** Read
@@ -238,41 +301,42 @@ default export**: use named imports.
 
 - `app/`, `components/`, `features/`, `lib/`, `hooks/`, `types/`: Next.js
   site (App Router, TypeScript). Folder plan from `prompt.md`.
-  - `app/page.tsx` renders `components/map/MapView.tsx`: header, search,
-    category tabs, map, panels; loads the business tiles on screen. Opens
-    on Bethesda and Rockville, all groups.
-  - `lib/geo/tiles.ts`: Organic Maps tile math: Mercator, tile zoom,
-    tiles covering the screen, share of a stat cell on screen.
-  - `components/map/BusinessMap.tsx`: the MapLibre map (browser only,
-    loaded with `ssr: false`).
-  - `components/business/CategoryTabs.tsx`, `BusinessPanel.tsx`: tabs with
-    counts; panel with address, hours, phone, website, OSM link.
-  - `components/business/TagFilter.tsx` + `lib/tags.ts`: type chips inside
-    a category tab.
-  - `components/business/SearchBox.tsx` + `lib/search.ts`: search bar over
-    every business, by name, street or city; matches on screen rank first.
+  - `app/page.tsx` renders `components/app/LocalMap.tsx`: the sidebar and
+    the map, and the state between them (group, chip, selected place,
+    hovered row, directions).
+  - `components/map/OrganicMap.tsx`: the MapLibre map with the generated
+    Organic Maps style, business pins, highlights, saved bookmarks, route
+    (browser only, loaded with `ssr: false`).
+  - `components/sidebar/`: `SearchField`, `Filters` (groups and chips),
+    `PlaceList`, `PlaceDetail`, `DirectionsView`, `SavedList`, one
+    stylesheet `Sidebar.module.css`.
+  - `hooks/useTiles.ts`: loads the Organic Maps tiles on screen and counts
+    what's in view. `lib/geo/tiles.ts`: the tile math.
+  - `lib/search.ts` (search over `search.json`), `lib/tags.ts` (chip
+    labels), `lib/groups.ts` (group names, type labels).
   - Directions: `hooks/useRouteSession.ts` (live navigation state: start,
     route, position, next turn, off-route rerouting, demo trip),
-    `lib/routing/valhalla.ts` (route requests), `lib/routing/geometry.ts`
-    (distances, snapping a position to the route), `lib/routing/format.ts`,
-    `components/routing/DirectionsPanel.tsx`, `types/routing.ts`.
-  - `lib/groups.ts`: tab names and pin colors. `types/business.ts`: data types.
+    `lib/routing/` (Valhalla requests, geometry, formatting),
+    `types/routing.ts`.
+- `public/map/`: the generated map style, sprites and business type rules
+  (from `pipeline/style/build_style.py`).
 - `public/data/`: the site's data, written by `pipeline/load/export_site_data.py`.
   `tiles/<z>/<x>_<y>.json` (one Organic Maps tile: GeoJSON pins plus count
   stats) and `tiles.json` (zooms, covered area, and which tiles have
-  businesses, so the site never asks for an empty one). Committed with the
-  site so hosting needs no pipeline run: about 7,000 small files, 43 MB. `search.json`: every business name for the search
-  bar, loaded only when someone clicks into the search bar.
+  businesses, so the site never asks for an empty one). About 7,000 small
+  files, 44 MB. `search.json`: every business name, loaded when someone
+  clicks into search.
 - `pipeline/`: offline Python data jobs. Not part of the site.
   - `fetch/businesses.py`: OSM businesses in `REGION`, one Overpass query per
     0.2° cell (cached in `data/raw/osm/cells/`) → `data/processed/businesses.geojson`.
     A cell that fails is skipped and named at the end; rerun to fill it in.
-  - `filter/chains/filter_chains.py`: layer 1 chain filter → `data/processed/businesses_layer1.geojson`
-  - `filter/groups/assign_groups.py`: drops chains, unnamed places and
-    non-businesses, assigns map groups → `data/processed/small_businesses.geojson`
-  - `filter/national`, `filter/matching`: layers 2 and 3 (not built yet)
-  - `load/export_site_data.py`: checks every business passed the filters,
-    ranks them, cuts Organic Maps tiles for the site → `public/data/`
+  - `filter/independent.py`: the small-business algorithm and map groups →
+    `data/processed/small_businesses.geojson` and `business_decisions.csv`
+  - `style/drules.py`, `style/build_style.py`: Organic Maps drawing rules →
+    `public/map/`
+  - `load/export_site_data.py`: checks every business was judged
+    independent, attaches Organic Maps icons and priorities, cuts Organic
+    Maps tiles → `public/data/`
   - `load/tagging.py`: tag rules, used by the export
 - `data/raw/`: downloads and caches, git-ignored. `data/processed/`: pipeline
   output, committed.
@@ -287,8 +351,8 @@ npm install && npm run dev                      # site at localhost:3000
 python3 -m venv .venv
 .venv/bin/pip install -r pipeline/requirements.txt
 .venv/bin/python pipeline/fetch/businesses.py   # OSM download; --refresh ignores the cache
-.venv/bin/python pipeline/filter/chains/filter_chains.py
-.venv/bin/python pipeline/filter/groups/assign_groups.py
+.venv/bin/python pipeline/filter/independent.py       # small businesses + groups
+.venv/bin/python pipeline/style/build_style.py        # map style; add --apk <path> the first time
 .venv/bin/python pipeline/load/export_site_data.py   # writes public/data/ for the site
 ```
 
@@ -302,26 +366,27 @@ python3 -m venv .venv
 | places with no name (can't be counted) | 188 |
 | businesses missing `addr:city` | about half |
 
-**Current data, 2026-10-15** (`REGION` rectangle, 41 of 49 cells): 28,854
-businesses in OSM, 12,448 chains (brand tag 10,901, NSI 134, 3+ locations
-by name 1,285, shared website 128), 14,784 small businesses after unnamed,
-non-businesses and vape shops are removed. By group: food 6,526, shopping
-2,929, personal care 2,101, services 1,708, groceries 1,520. `search.json`
-1.89 MB.
+**Current data, 2026-10-15, new algorithm** (`REGION` rectangle, 41 of 49
+cells): 28,854 businesses in OSM. Chains: 11,449 with 3+ locations here,
+508 with a brand Wikidata id, 55 Name Suggestion Index brands, 20 brand tag
+plus 2 locations. Also dropped: 1,384 unnamed, 169 non-businesses, 70 vape
+shops. **15,040 small businesses** after 65 institution-run places, 109
+smoke shops and 16 store-locator chains were also dropped (2026-10-15 later). Graph links: 9,842 brand id,
+6,281 website, 9,004 distinctive name, 279 operator, 171 phone, 98
+social/email. `search.json` 1.94 MB.
 
-**Organic Maps tiles, 2026-10-15** (43 MB on disk, 6,982 tiles; export
-takes about 25 s):
+**Organic Maps tiles, 2026-10-15** (6,982 tiles; export about 25 s):
 
 | zoom (OM) | MapLibre zoom | tiles | pins | median | largest |
 |---|---|---|---|---|---|
-| 10 | 9 | 8 | 1,757 | 99 KB | 314 KB |
-| 11 | 10 | 26 | 3,035 | 27 KB | 329 KB |
-| 12 | 11 | 80 | 4,509 | 11 KB | 299 KB |
-| 13 | 12 | 253 | 6,228 | 3 KB | 256 KB |
-| 14 | 13 | 582 | 8,145 | 2 KB | 164 KB |
-| 15 | 14 | 1,141 | 10,025 | 1 KB | 97 KB |
-| 16 | 15 | 1,903 | 11,810 | 1 KB | 55 KB |
-| 17 | 16+ | 2,989 | 14,784 (all) | 1 KB | 31 KB |
+| 10 | 9 | 8 | 1,770 | 107 KB | 329 KB |
+| 11 | 10 | 26 | 3,080 | 29 KB | 344 KB |
+| 12 | 11 | 80 | 4,590 | 12 KB | 318 KB |
+| 13 | 12 | 253 | 6,364 | 4 KB | 272 KB |
+| 14 | 13 | 582 | 8,334 | 2 KB | 177 KB |
+| 15 | 14 | 1,152 | 10,267 | 2 KB | 105 KB |
+| 16 | 15 | 1,935 | 12,119 | 1 KB | 61 KB |
+| 17 | 16+ | 3,042 | 15,199 (all) | 1 KB | 35 KB |
 
 Low-zoom tiles are mostly count stats.
 
@@ -617,3 +682,88 @@ why "add a missing business" is a core feature, not an extra.
   ("Sunshine General Store") opens its panel, which stays open after
   zooming out. No console errors. Not done: 8 northeast cells are still
   missing from the data (see the entry above).
+- **2026-10-15 (Organic Maps rebuild, desktop first):** Conrad found the
+  map still looked like before and asked to reverse engineer Organic Maps'
+  rendering itself, rebuild everything from the concepts only, write our own
+  small-business algorithm, and design for laptops (no phone testing yet).
+  On a new branch `organic-rebuild`:
+  (1) **Rendering:** decoded `drules_default.bin` from the shipped APK (OMDR
+  v1, ported from `libs/indexer/drules_format.cpp`; values match their text
+  dump) and read how their renderer applies it (`apply_feature_functors.cpp`
+  colors and caption anchors, `overlay_handle.cpp` priority packing). Built
+  a MapLibre style from it over OpenFreeMap tiles: 248 layers, their colors,
+  widths, label sizes, landmark icons and draw order; their 860-icon atlas
+  as the sprite. Pins use their icon and overlay priority per type. Bugs
+  found on the way: colors store transparency not opacity; outline color 0
+  means none (labels had black halos); dash arrays inside zoom steps need
+  `literal`; the map container was zero pixels tall under MapLibre's CSS.
+  (2) **Algorithm:** `pipeline/filter/independent.py` replaces the old chain
+  filter and group script (deleted with `businesses_layer1.geojson` and the
+  empty `national`/`matching` folders). Identity graph + distinctive-name
+  test (details above). Spot checks: Kusshi 6, Moby Dick 21, Lebanese
+  Taverna 7, Matchbox 9, Mamma Lucia 9, Z-Burger 9 caught as chains; China
+  King (8 shops) and the "Golden …" places stay independent. Found and fixed
+  on the way: Facebook `profile.php` links had merged 10 unrelated
+  businesses; Rasa (rasa.co) vs Rasa Grill were merged by name. 15,199 small
+  businesses (was 14,784).
+  (3) **Interface:** all old components deleted; new desktop layout
+  (sidebar + map, list of places on the map coupled to the map by hover),
+  Public Sans, Organic Maps' selection blue as the one accent.
+  Tested in headless Chrome at 1440x900 on a production build: map renders
+  with no console errors; list hover raises the search-result pin; "pizza"
+  search opens Food & drink with the Pizza chip; "Sunshine General" opens
+  the place; Save, then Directions from a fake GPS in Olney: walk 5.4 mi,
+  1 hr 49 min, route drawn in Organic Maps blue, simulated trip shows the
+  next turn; Saved lists the place. Not done: real mobile layout; the 8
+  missing northeast data cells.
+- **2026-10-15 (visible pins, dark mode):** Conrad found some pins hard to
+  see and asked for dark mode. Pins now sit on a disc with a ring (light:
+  white, dark: `#262c2f`). Dark mode uses Organic Maps' dark variant: the
+  drules file holds both palettes (dark roads `#753800`, water `#002222`,
+  background `#0F0F0F`) and the APK ships dark icon atlases, so
+  `build_style.py` now writes both styles and sprites. Switching reloads
+  the map style and re-adds our layers on `style.load`. MapLibre 6 needs
+  `setMissingStyleImageResolver` (the old event can't supply images), and
+  the resolver waits for the sprite icon to load. Tested in headless
+  Chrome: pins drawn on discs, Dark switches map and sidebar, the choice
+  survives a reload, Light switches back; no errors besides software-GPU
+  notes.
+- **2026-10-15 (de-slop pass, institution rule):** Conrad pasted a list of
+  anti-"AI look" tools. Checked the app against no-slop-ui's banned patterns
+  and checklist, avoid-ai-design's tells catalog and scanner (read first:
+  file reads only), hallmark's anti-patterns and no-ai-slop's copy rules.
+  Fixed: the small "Local Map" label above the place name (eyebrow +
+  headline) is now a plain app bar with the theme switch; place name 22 px
+  instead of 30 px; chips 6 px corners instead of pills; "‹" glyph removed
+  from back links; panel `#fcfcfb` instead of pure white; smaller dropdown
+  shadow; curly apostrophes. Scanner: 0 findings after marking the dark
+  ground as deliberate (it is Organic Maps' dark land color). Conrad also
+  saw a George Mason store counted as small and asked about an NVIDIA
+  model. Couldn't find that store by name, but found the class of error:
+  institution-run places. Added the rule above: 65 places dropped (Virginia
+  ABC, Montgomery County ABS, GWU/UMD/GMU/Marymount campus dining, Smithsonian
+  and memorial cafes, college bookstores). 15,165 small businesses.
+- **2026-10-15 (smoke shops, store locators):** Conrad felt 15k small
+  businesses was a lot and asked to remove vape shops. Vape-tagged shops
+  were already out (71); an audit found most `shop=tobacco` places are smoke
+  and vape shops by another tag ("Smoke Hut", "Tobacco Plus: vape, CBD,
+  kratom"), so all tobacco shops except cigar shops and tobacconists are
+  dropped now (109; "cigarette" no longer counts as cigar). Also found
+  national chains with 1-2 stores here; their websites are chain store
+  locators, now a chain rule (16; an old Urbanspoon listing number and
+  street numbers in addresses don't count). 15,040 small businesses.
+- **2026-10-15 (fair ranking):** `rank` was "how well described" (website,
+  hours, phone, tags), so when pins competed for space, shops with nothing
+  online lost. Conrad: cutting or hiding them goes against helping
+  underserved businesses. `rank` is now a fixed random 0-255 from the OSM
+  id (sha256), still after Organic Maps' type priority. Measured share of
+  pins for shops with no website, phone or hours: widest zoom 32% → 48%,
+  MapLibre zoom 11 38% → 46%, zoom 13 42% → 46% (48% of all businesses).
+  Sidebar note now reads "N of M on the map" instead of "best-described".
+- **2026-10-15 (paused, next up):** Conrad: pin colors look alike (Organic
+  Maps colors by its own broad classes) and too many pins at once. Plan, not
+  built yet: color each disc by our group with the icon on top (light-map
+  set validated with the dataviz validator, all pairs: services `#2a78d6`,
+  food `#eda100`, personal care `#e87ba4`, groceries `#008300`, shopping
+  `#b23f9a`; dark icon on the amber and pink discs; dark-map set still to
+  pick), and thin harder (`THIN_CELLS` 16 → 8, smaller pins zoomed out).
