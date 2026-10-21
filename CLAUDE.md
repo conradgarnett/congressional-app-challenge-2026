@@ -351,7 +351,7 @@ npm install && npm run dev                      # site at localhost:3000
 python3 -m venv .venv
 .venv/bin/pip install -r pipeline/requirements.txt
 .venv/bin/python pipeline/fetch/businesses.py   # OSM download; --refresh ignores the cache
-.venv/bin/python pipeline/filter/independent.py       # small businesses + groups
+.venv/bin/python pipeline/filter/independent.py       # small businesses + groups; downloads NSI the first time
 .venv/bin/python pipeline/style/build_style.py        # map style; add --apk <path> the first time
 .venv/bin/python pipeline/load/export_site_data.py   # writes public/data/ for the site
 ```
@@ -767,3 +767,24 @@ why "add a missing business" is a core feature, not an extra.
   food `#eda100`, personal care `#e87ba4`, groceries `#008300`, shopping
   `#b23f9a`; dark icon on the amber and pink discs; dark-map set still to
   pick), and thin harder (`THIN_CELLS` 16 → 8, smaller pins zoomed out).
+- **2026-10-21 (health check, NSI download):** Conrad asked for a full
+  check of the app before more work. Passed: `npm ci`, lint, `tsc`,
+  `npm run build`, and a headless browser run of the built site (load,
+  search "tacos", open a place, save it and see it after reload, walking
+  directions and Simulate trip, groups and type chips, zoom out and in,
+  pin click, dark theme kept after reload, 390 px phone width). No page
+  errors. All 7,065 tiles in `tiles.json` exist and parse; tiles and
+  `search.json` hold the same 15,040 businesses. Broken: nothing downloaded
+  `data/raw/nsi.json` (git-ignored), so `independent.py` crashed on a fresh
+  clone. It now downloads NSI 8.0.20260918 (pinned) on first run; that
+  version changes 14 of 28,854 decisions against the committed data, which
+  was left as is. Open, needs a team call: national chains with 1-2 stores
+  here that NSI doesn't place in DC/MD/VA and that carry no brand tag stay
+  "small" (PLANTA, Foxtrot, California Fish Grill seen in the Bethesda
+  list). Counting any US-state NSI brand would flag 19 kept businesses:
+  real chains (California Fish Grill, Eastern Mountain Sports, Heytea,
+  Moxies, Poke Bros, The Tile Shop, Xi'an Famous Foods) but also generic
+  names (Aroma, Joe's Pizza), and it still misses PLANTA and Foxtrot (not in
+  NSI), so it was not changed. `npm audit`: 5 high, all in
+  `eslint-config-next`'s dev-only glob library, not shipped; its suggested
+  fix downgrades to Next 14, so ignored.

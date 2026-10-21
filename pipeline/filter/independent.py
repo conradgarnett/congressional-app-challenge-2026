@@ -32,7 +32,7 @@ the whole US; drop chains. This module decides it with one algorithm:
    left out entirely (team decision for the school demo), and so are smoke
    shops: tobacco shops except cigar shops and tobacconists.
 
-Input:  data/processed/businesses.geojson, data/raw/nsi.json
+Input:  data/processed/businesses.geojson, data/raw/nsi.json (downloaded on first run)
 Output: data/processed/small_businesses.geojson   (the businesses the site shows)
         data/processed/business_decisions.csv     (every business: entity, locations, decision, reason)
 Run from repo root: .venv/bin/python pipeline/filter/independent.py
@@ -47,10 +47,14 @@ from urllib.parse import urlparse
 
 import geopandas as gpd
 import pandas as pd
+import requests
 
 ROOT = Path(__file__).resolve().parents[2]
 PROCESSED = ROOT / "data" / "processed"
 NSI_PATH = ROOT / "data" / "raw" / "nsi.json"
+# Name Suggestion Index release; pinned so reruns give the same chains. Delete nsi.json to fetch again.
+NSI_VERSION = "8.0.20260918"
+NSI_URL = f"https://cdn.jsdelivr.net/npm/name-suggestion-index@{NSI_VERSION}/dist/json/nsi.json"
 
 LOCATIONS_FOR_CHAIN = 3
 LOCATION_METERS = 60
@@ -225,8 +229,22 @@ class UnionFind:
         self.parent[self.find(a)] = self.find(b)
 
 
+def download_nsi() -> None:
+    """Fetch the Name Suggestion Index once (data/raw/ is git-ignored, so a fresh clone has none)."""
+    if NSI_PATH.exists():
+        return
+    print(f"Downloading Name Suggestion Index {NSI_VERSION}...")
+    response = requests.get(NSI_URL, timeout=120)
+    response.raise_for_status()
+    NSI_PATH.parent.mkdir(parents=True, exist_ok=True)
+    partial = NSI_PATH.with_suffix(".part")
+    partial.write_bytes(response.content)
+    partial.replace(NSI_PATH)  # never leave a half-written nsi.json behind
+
+
 def load_nsi_names() -> dict[str, set[str]]:
     """Normalised brand name → map groups it is sold as, for brands present in the US."""
+    download_nsi()
     names: dict[str, set[str]] = defaultdict(set)
     for path, entry in json.loads(NSI_PATH.read_text())["nsi"].items():
         parts = path.split("/")
