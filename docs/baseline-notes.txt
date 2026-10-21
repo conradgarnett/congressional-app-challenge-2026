@@ -1,0 +1,66 @@
+CONGRESSIONAL APP CHALLENGE 2026 — MD-08
+
+CONCEPT
+Interactive map of Maryland's 8th Congressional District that locates
+underserved communities and the small businesses in and around them.
+Values tie-in (Jesuit): solidarity, "for and with others", faith that does justice.
+
+IDEA 1: OpenStreetMap database/frontend focused on small businesses
+- Businesses: OSM via Overpass API (shop=*, amenity=restaurant/cafe/etc, craft=*, office=*)
+- Independent vs chain: chains usually carry brand=* / brand:wikidata tags -> no brand tag ~= independent
+- District boundary: Census TIGER/Line congressional districts (verify current MD-08 lines)
+- Underserved layers (by census tract):
+    - Census ACS: median household income, poverty rate
+    - CDC/ATSDR Social Vulnerability Index (SVI)
+    - USDA Food Access Research Atlas (food deserts)
+    - SBA HUBZones (federal "underserved business zones")
+- Frontend: Leaflet or MapLibre + OSM tiles; tract shading + business pins
+
+FEATURE IDEAS
+- "Gap finder": underserved tracts with few/no small businesses of a type (e.g. no grocery)
+- Shop-local directory: search/filter independent businesses by category and neighborhood
+- Community contributions: users report missing businesses -> edits go back to OSM
+- Resources panel: SBA / Montgomery County small-business programs for that area
+
+DECISIONS (2026-10-01)
+- Web app.
+- Team project; Conrad does most of the build (only Claude subscription).
+- Plenty of time before deadline.
+- Small business = 2 or fewer locations.
+  Rule tested on Montgomery County OSM data (2026-10-01):
+    count locations by normalized name; drop anything with a brand / brand:wikidata tag.
+    Name count alone let 419 chain stores through (Costco, KFC, Ace Hardware...),
+    because a national chain can have only 1-2 stores inside the area.
+    Result: ~2,180 small businesses. 188 unnamed places can't be counted.
+- Filter has 2 layers:
+    1. Drop big chains (OSM brand tags + Name Suggestion Index chain list).
+    2. National check: does the business have locations in other districts?
+       Keep only if total US locations <= 2.
+  Layer 2 options (no live API calls per business — too slow, rate-limited):
+    a. Overture Maps Places: free nationwide business data, query once with DuckDB.
+       Bonus: may also fill gaps in MD-08 coverage.
+    b. US OpenStreetMap extract (Geofabrik) -> one-time name count table.
+  Risk: same name != same business ("Golden Dragon" in 50 towns, all unrelated).
+    Match on name + website/phone, not name alone.
+  Same-business matching (two places with similar names):
+    Strong match (any one = same business):
+      - same website (full site, not just a shared host like facebook.com,
+        squarespace, toasttab, yelp, linktr.ee)
+      - same phone number (normalized to digits). One-way only: same phone = same
+        business, but different phones prove nothing (each location has own line).
+      - same email, Instagram/Facebook handle, or OSM operator tag
+    Supporting only (never enough alone): name, category/cuisine, opening hours.
+    Menu: compare menu items/prices from website. Costly (needs scraping),
+      so use only for unclear cases.
+    Logo: also for unclear cases. Grab logo from website (site icon / social preview
+      image) or Wikidata, compare with image hash or image-similarity model.
+      Watch for template/stock logos from site builders -> false matches.
+    No strong signal -> treat as different businesses (keep both as small).
+
+OPEN QUESTIONS
+- How complete is OSM business coverage in MD-08?
+  Checked 2026-10-01 (Overpass, all of Montgomery County; shop/craft/food & drink):
+    3,747 businesses, ~1,300 chains (brand-tagged), ~2,450 likely independent.
+    Real count is far higher -> OSM is partial; ~half lack an addr:city.
+  -> Gaps make "add a missing business" a core feature, not an extra.
+  -> Look for a county/state business dataset to cross-check.

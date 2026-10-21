@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.39522,38.30754]},"properties":{"id":"node/10306025209","name":"Alvin's Repair Shop","group":"services","category":"shop=car_repair","tags":";car_repair;","rank":141,"icon":"car-repair-m","priority":2400,"z":12,"gz":10}}]}

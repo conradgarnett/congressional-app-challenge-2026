@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-76.79412,38.89066]},"properties":{"id":"node/4415235027","name":"Barn Cat Gift Shop","group":"shopping","category":"shop=gift","tags":";gift;","rank":38,"icon":"gift-m","priority":1600,"z":10,"gz":10}}],"stats":[{"c":[0,15],"g":{"shopping":1},"t":{"shopping":{"gift":1}}}]}

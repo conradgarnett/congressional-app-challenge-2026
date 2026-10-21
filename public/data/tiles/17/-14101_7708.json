@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.45376,38.94557]},"properties":{"id":"node/3413155737","name":"Market 1962","group":"shopping","category":"shop=newsagent","hours":"Mo-Su,PH 06:00-21:00","tags":";newsagent;","rank":125,"icon":"newsagent_shop-m","priority":2400,"z":13,"gz":13}}]}

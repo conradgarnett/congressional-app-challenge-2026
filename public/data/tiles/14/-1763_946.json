@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.45858,38.34443]},"properties":{"id":"node/10313637712","name":"540 Auto Sales","group":"shopping","category":"shop=car","tags":";car;","rank":0,"icon":"car_shop-m","priority":1600,"z":10,"gz":10}}],"stats":[{"c":[6,1],"g":{"shopping":1},"t":{"shopping":{"car":1}}}]}

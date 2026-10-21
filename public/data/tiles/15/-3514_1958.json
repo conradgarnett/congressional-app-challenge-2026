@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.2035,39.47062]},"properties":{"id":"way/1271059479","name":"Frey's Brewing Company","group":"food","category":"craft=brewery","tags":";brewery;","rank":147,"icon":"brewery-m","priority":2400,"z":10,"gz":10}}],"stats":[{"c":[6,0],"g":{"food":1},"t":{"food":{"brewery":1}}}]}

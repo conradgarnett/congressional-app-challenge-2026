@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.79199,38.75512]},"properties":{"id":"node/3780404062","name":"Whistling Swan","group":"food","category":"amenity=pub","tags":";pub;wifi;","rank":71,"icon":"pub-m","priority":3950,"z":10,"gz":10}}],"stats":[{"c":[12,0],"g":{"food":1},"t":{"food":{"pub":1,"wifi":1}}}]}

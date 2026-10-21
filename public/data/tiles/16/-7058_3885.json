@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.53606,39.20741]},"properties":{"id":"node/6638638966","name":"Brossman's Farm","group":"groceries","category":"shop=farm","tags":";farm;","rank":194,"icon":"convenience-m","priority":2700,"z":12,"gz":10}}],"stats":[{"c":[7,1],"g":{"groceries":1},"t":{"groceries":{"farm":1}}}]}

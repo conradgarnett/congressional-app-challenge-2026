@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.72946,39.13728]},"properties":{"id":"node/9187401929","name":"West End Wine Bar and Pub","group":"food","category":"amenity=restaurant","cuisine":"american;regional","tags":";american;regional;restaurant;","rank":71,"icon":"restaurant-m","priority":4100,"z":12,"gz":12}}]}

@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.66648,39.63132]},"properties":{"id":"way/452126764","name":"Heating Plant","group":"services","category":"craft=hvac","tags":";hvac;","rank":71,"icon":"plumber-m","priority":500,"z":12,"gz":11}}]}

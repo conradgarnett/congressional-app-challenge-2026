@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.7427,39.51327]},"properties":{"id":"way/279933580","name":"Sawmill","group":"services","category":"craft=sawmill","tags":";sawmill;","rank":127,"icon":"sawmill-m","priority":500,"z":10,"gz":10}}],"stats":[{"c":[10,1],"g":{"services":1},"t":{"services":{"sawmill":1}}}]}

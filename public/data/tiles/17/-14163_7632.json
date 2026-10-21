@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.79794,38.6201]},"properties":{"id":"node/13608641401","name":"M&B Auto Group","group":"shopping","category":"shop=car","hours":"Mo-Su 10:00-18:00","housenumber":"10115","street":"Clarkes Road","tags":";car;","rank":201,"icon":"car_shop-m","priority":1600,"z":13,"gz":10}}]}

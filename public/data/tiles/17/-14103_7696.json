@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.46475,38.89118]},"properties":{"id":"node/2211793564","name":"Chantilly Auto Body","group":"services","category":"shop=car_repair","tags":";car_repair;","rank":70,"icon":"car-repair-m","priority":2400,"z":12,"gz":11}}]}

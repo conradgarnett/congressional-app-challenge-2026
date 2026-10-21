@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.20633,39.14984]},"properties":{"id":"node/12230599605","name":"Inari Sushi","group":"food","category":"amenity=restaurant","cuisine":"sushi","tags":";sushi;restaurant;","rank":55,"icon":"restaurant-m","priority":4100,"z":13,"gz":13}}]}

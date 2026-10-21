@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.45582,38.63848]},"properties":{"id":"node/3755287849","name":"Snack Bar","group":"food","category":"amenity=fast_food","cuisine":"burger","tags":";burger;fast_food;","rank":229,"icon":"fastfood-m","priority":4050,"z":10,"gz":10}}]}

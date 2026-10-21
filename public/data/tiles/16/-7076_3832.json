@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.7308,38.75834]},"properties":{"id":"node/11460317249","name":"CroppMetcalfe","group":"services","category":"craft=hvac","tags":";hvac;","rank":65,"icon":"plumber-m","priority":500,"z":11,"gz":10}}],"stats":[{"c":[12,7],"g":{"services":1},"t":{"services":{"hvac":1}}}]}

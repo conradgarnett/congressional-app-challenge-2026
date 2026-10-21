@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-76.65237,38.75949]},"properties":{"id":"way/520865037","name":"R&J Liquors","group":"groceries","category":"shop=alcohol","tags":";alcohol;","rank":160,"icon":"alcohol-m","priority":2400,"z":10,"gz":10}}],"stats":[{"c":[11,2],"g":{"groceries":1},"t":{"groceries":{"alcohol":1}}}]}

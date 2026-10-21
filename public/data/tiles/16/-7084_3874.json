@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.82464,39.12064]},"properties":{"id":"node/10231336512","name":"B-Chord Brewery","group":"food","category":"craft=brewery","tags":";brewery;","rank":154,"icon":"brewery-m","priority":2400,"z":11,"gz":11}}],"stats":[{"c":[3,14],"g":{"food":1},"t":{"food":{"brewery":1}}}]}

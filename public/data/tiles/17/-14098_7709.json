@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.4425,38.94875]},"properties":{"id":"node/3413208672","name":"Urban Crave","group":"food","category":"amenity=restaurant","hours":"Mo-Su 06:30-22:00","tags":";restaurant;wheelchair_accessible;","rank":187,"icon":"restaurant-m","priority":4100,"z":12,"gz":12}}]}

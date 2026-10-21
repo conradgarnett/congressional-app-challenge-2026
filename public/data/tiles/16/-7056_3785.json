@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.5142,38.35731]},"properties":{"id":"way/43250411","name":"Allen's Auto Sales","group":"shopping","category":"shop=car","tags":";car;","rank":102,"icon":"car_shop-m","priority":1600,"z":12,"gz":12}}],"stats":[{"c":[7,13],"g":{"shopping":1},"t":{"shopping":{"car":1}}}]}

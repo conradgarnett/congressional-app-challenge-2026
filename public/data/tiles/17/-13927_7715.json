@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-76.5024,38.97644]},"properties":{"id":"node/3710073273","name":"Reuben Restaurant","group":"food","category":"amenity=restaurant","street":"West Street","city":"Annapolis","postcode":"21401","tags":";restaurant;","rank":242,"icon":"restaurant-m","priority":4100,"z":10,"gz":10}}]}

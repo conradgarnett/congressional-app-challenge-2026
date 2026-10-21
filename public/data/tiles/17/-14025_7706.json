@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.03726,38.93643]},"properties":{"id":"node/741027388","name":"Woodner Grocery","group":"groceries","category":"shop=convenience","housenumber":"3636","street":"16th Street Northwest","tags":";convenience;","rank":91,"icon":"convenience-m","priority":2700,"z":12,"gz":12}}]}

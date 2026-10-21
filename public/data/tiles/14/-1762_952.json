@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.41581,38.58131]},"properties":{"id":"way/1175120948","name":"Dining Hall","group":"food","category":"amenity=fast_food","tags":";fast_food;","rank":178,"icon":"fastfood-m","priority":4050,"z":10,"gz":10}}],"stats":[{"c":[5,15],"g":{"food":1},"t":{"food":{"fast_food":1}}}]}

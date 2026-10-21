@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.14051,39.09779]},"properties":{"id":"node/11113111186","name":"Bakery de France","group":"food","category":"shop=bakery","housenumber":"603","street":"Dover Road","tags":";bakery;","rank":183,"icon":"bakery-m","priority":2550,"z":12,"gz":12}}]}

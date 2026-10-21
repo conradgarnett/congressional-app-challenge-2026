@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.71583,38.80533]},"properties":{"id":"way/1356946918","name":"Tent Area Sign","group":"groceries","category":"shop=kiosk","tags":";kiosk;","rank":222,"icon":"kiosk-m","priority":1600,"z":10,"gz":10}}],"stats":[{"c":[2,15],"g":{"groceries":1},"t":{"groceries":{"kiosk":1}}}]}

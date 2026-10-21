@@ -1,0 +1,6 @@
+{
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "editor.formatOnSave": true,
+  "eslint.useFlatConfig": true,
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python"
+}

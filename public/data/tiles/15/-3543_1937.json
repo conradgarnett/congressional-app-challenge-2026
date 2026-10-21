@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.84495,39.12091]},"properties":{"id":"node/1331902236","name":"Twin Oaks Winery","group":"food","category":"craft=winery","tags":";winery;","rank":102,"icon":"winery-m","priority":2400,"z":11,"gz":11}}],"stats":[{"c":[3,7],"g":{"food":1},"t":{"food":{"winery":1}}}]}

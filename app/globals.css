@@ -1,0 +1,91 @@
+/*
+ * avoid-ai-design-ignore-file: SD2 (the dark ground #0f0f0f is Organic Maps' own dark land color, so the
+ * sidebar meets the map; red is used only for errors)
+ *
+ * Tokens. The map is drawn in Organic Maps' colors (public/map/style.json);
+ * the interface takes its one accent from the same file (their selection
+ * blue) and otherwise stays out of the map's way.
+ */
+:root {
+  --map-paper: #e3e1d2; /* Organic Maps' land color */
+  --panel: #fcfcfb;
+  --ink: #22313a;
+  --muted: #5d6b73;
+  --hairline: #d9ddd8;
+  --hover: #f1f3f0;
+  --accent: #1e96f0; /* Organic Maps' Selection color */
+  --accent-ink: #0b5fa5;
+  --error: #b42318;
+  --on-ink: #ffffff;
+  --on-ink-muted: rgba(255, 255, 255, 0.75);
+  --on-accent: #ffffff;
+  --shadow: rgba(34, 49, 58, 0.16);
+  --font: var(--font-public-sans), system-ui, sans-serif;
+  color-scheme: light;
+}
+
+/* Dark: set by hooks/useTheme.ts; the map switches to Organic Maps' dark palette */
+:root[data-theme="dark"] {
+  --map-paper: #0f0f0f; /* Organic Maps' dark land color */
+  --panel: #171b1d;
+  --ink: #e6eaec;
+  --muted: #9aa6ad;
+  --hairline: #2c3337;
+  --hover: #22282b;
+  --accent: #3fa7f3;
+  --accent-ink: #7cc4ff;
+  --error: #ff8a80;
+  --on-ink: #171b1d;
+  --on-ink-muted: rgba(23, 27, 29, 0.7);
+  --on-accent: #0b1a26;
+  --shadow: rgba(0, 0, 0, 0.5);
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--map-paper);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: var(--accent-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* MapLibre's credit box follows the theme */
+:root[data-theme="dark"] .maplibregl-ctrl.maplibregl-ctrl-attrib {
+  background: rgba(23, 27, 29, 0.85);
+  color: var(--muted);
+}
+
+:root[data-theme="dark"] .maplibregl-ctrl-attrib a {
+  color: var(--ink);
+}

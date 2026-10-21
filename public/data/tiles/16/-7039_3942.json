@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","geometry":{"type":"Point","coordinates":[-77.3279,39.69433]},"properties":{"id":"node/2889081409","name":"O'Leary's Store","group":"shopping","category":"shop=gift","tags":";gift;","rank":20,"icon":"gift-m","priority":1600,"z":11,"gz":10}}],"stats":[{"c":[7,7],"g":{"shopping":1},"t":{"shopping":{"gift":1}}}]}
